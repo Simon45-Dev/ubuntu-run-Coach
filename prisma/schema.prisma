@@ -1,0 +1,498 @@
+// Ubuntu Run coaching platform - core data model.
+// Every entity here maps back to Section 7 of the product planning document.
+// Tables for Group/TrainingPlan/Workout/WorkoutResult/RaceGoal/Message/Notification
+// exist now so later slices aren't blocked by migrations, but have no API yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum OrganisationType {
+  SOLO
+  CLUB
+}
+
+enum Role {
+  PLATFORM_ADMIN
+  COACH
+  ATHLETE
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum MfaType {
+  TOTP
+}
+
+enum PbSource {
+  SELF_REPORTED
+  VERIFIED
+}
+
+enum TrainingPlanPhase {
+  BASE
+  BUILD
+  PEAK
+  TAPER
+  RECOVERY
+}
+
+enum TrainingPlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum WorkoutType {
+  EASY
+  TEMPO
+  INTERVAL
+  LONG_RUN
+  RACE
+  REST
+  CROSS_TRAIN
+}
+
+enum RaceGoalStatus {
+  PLANNED
+  COMPLETED
+  DNF
+  CANCELLED
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  READ
+  FAILED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum ConsentType {
+  HEALTH_CHECKIN_DATA
+  TERMS_OF_SERVICE
+}
+
+// ---------------------------------------------------------------------------
+// Organisation / Subscription
+// ---------------------------------------------------------------------------
+
+/// Sits above Coach and owns Subscription. v1 UX only ever creates one-coach
+/// organisations, but the shape supports multiple coaches per org (Stage 7:
+/// clubs / larger coaching businesses) without a later schema rewrite.
+model Organisation {
+  id     String           @id @default(uuid())
+  name   String
+  type   OrganisationType @default(SOLO)
+
+  coaches       Coach[]
+  subscriptions Subscription[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("organisations")
+}
+
+model Subscription {
+  id                  String              @id @default(uuid())
+  organisationId      String
+  organisation        Organisation        @relation(fields: [organisationId], references: [id])
+  planName            String
+  status              SubscriptionStatus  @default(TRIALING)
+  startDate           DateTime
+  renewalDate         DateTime?
+  athleteLimit        Int
+  coachLimit          Int                 @default(1)
+  billingProvider     String?
+  externalCustomerId  String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([organisationId])
+  @@map("subscriptions")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id                 String     @id @default(uuid())
+  email              String     @unique
+  passwordHash       String
+  name               String
+  role               Role
+  status             UserStatus @default(INVITED)
+  mfaEnabled         Boolean    @default(false)
+  mfaSecretEncrypted String?
+  mfaType            MfaType?
+  lastLoginAt        DateTime?
+
+  coachProfile      Coach?
+  athleteProfile    Athlete?
+  refreshTokens     RefreshToken[]
+  sentMessages      Message[]      @relation("SentMessages")
+  receivedMessages  Message[]      @relation("ReceivedMessages")
+  notifications     Notification[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Coach {
+  id              String       @id @default(uuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id])
+  organisationId  String
+  organisation    Organisation @relation(fields: [organisationId], references: [id])
+  bio             String?
+  experienceYears Int?
+  athleteLimit    Int?
+
+  athletes      Athlete[]
+  groups        Group[]
+  trainingPlans TrainingPlan[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([organisationId])
+  @@map("coaches")
+}
+
+/// Health-adjacent personal information (CheckIn) hangs off Athlete. Access to
+/// that subset is enforced more strictly than ordinary training data - see
+/// HealthDataScopeGuard and the Consent model below.
+model Athlete {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id])
+  coachId            String?
+  coach              Coach?   @relation(fields: [coachId], references: [id])
+  // Denormalised from coach for cheap/direct scoping queries - see
+  // buildAthleteScopeFilter() in src/common/scope/scope-filters.ts.
+  organisationId     String?
+  goal               String?
+  availability       Json?
+  trainingBackground String?
+
+  personalBests    PersonalBest[]
+  checkIns         CheckIn[]
+  raceGoals        RaceGoal[]
+  consents         Consent[]
+  groupMemberships GroupMembership[]
+  workoutResults   WorkoutResult[]
+  trainingPlans    TrainingPlan[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([coachId])
+  @@index([organisationId])
+  @@map("athletes")
+}
+
+model PersonalBest {
+  id            String    @id @default(uuid())
+  athleteId     String
+  athlete       Athlete   @relation(fields: [athleteId], references: [id])
+  distance      String
+  timeSeconds   Int
+  achievedDate  DateTime?
+  source        PbSource  @default(SELF_REPORTED)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([athleteId])
+  @@map("personal_bests")
+}
+
+// ---------------------------------------------------------------------------
+// Consent (backs the stricter access rule for CheckIn / health-adjacent data)
+// ---------------------------------------------------------------------------
+
+/// A history table rather than a single timestamp field, because consent can
+/// be granted, later withdrawn, and re-granted under a new policy version.
+model Consent {
+  id            String      @id @default(uuid())
+  athleteId     String
+  athlete       Athlete     @relation(fields: [athleteId], references: [id])
+  consentType   ConsentType
+  policyVersion String
+  grantedAt     DateTime    @default(now())
+  withdrawnAt   DateTime?
+
+  checkIns CheckIn[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([athleteId])
+  @@map("consents")
+}
+
+// ---------------------------------------------------------------------------
+// Schema-only this slice: Group, TrainingPlan, Workout, WorkoutResult,
+// CheckIn, RaceGoal, Message, Notification. No controllers/services yet.
+// ---------------------------------------------------------------------------
+
+model Group {
+  id                 String  @id @default(uuid())
+  organisationId     String
+  coachId            String
+  coach              Coach   @relation(fields: [coachId], references: [id])
+  name               String
+  programmeTemplateId String?
+
+  memberships   GroupMembership[]
+  trainingPlans TrainingPlan[]
+  messages      Message[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([coachId])
+  @@index([organisationId])
+  @@map("groups")
+}
+
+model GroupMembership {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  athleteId String
+  athlete   Athlete  @relation(fields: [athleteId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([groupId, athleteId])
+  @@map("group_memberships")
+}
+
+model TrainingPlan {
+  id          String              @id @default(uuid())
+  organisationId String
+  coachId     String
+  coach       Coach               @relation(fields: [coachId], references: [id])
+  athleteId   String?
+  athlete     Athlete?            @relation(fields: [athleteId], references: [id])
+  groupId     String?
+  group       Group?              @relation(fields: [groupId], references: [id])
+  name        String
+  startDate   DateTime
+  endDate     DateTime?
+  goal        String?
+  phase       TrainingPlanPhase?
+  version     Int                 @default(1)
+  status      TrainingPlanStatus  @default(DRAFT)
+
+  workouts Workout[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([coachId])
+  @@index([athleteId])
+  @@index([groupId])
+  @@map("training_plans")
+}
+
+model Workout {
+  id                String       @id @default(uuid())
+  trainingPlanId    String
+  trainingPlan      TrainingPlan @relation(fields: [trainingPlanId], references: [id])
+  scheduledDate     DateTime
+  type              WorkoutType
+  distanceTargetKm  Decimal?
+  durationTargetSec Int?
+  paceTarget        String?
+  hrZoneTarget      String?
+  rpeTarget         Int?
+  instructions      String?
+
+  result WorkoutResult?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([trainingPlanId])
+  @@map("workouts")
+}
+
+model WorkoutResult {
+  id                String   @id @default(uuid())
+  workoutId         String   @unique
+  workout           Workout  @relation(fields: [workoutId], references: [id])
+  athleteId         String
+  athlete           Athlete  @relation(fields: [athleteId], references: [id])
+  actualDistanceKm  Decimal?
+  actualDurationSec Int?
+  actualPace        String?
+  avgHr             Int?
+  maxHr             Int?
+  rpe               Int?
+  comments          String?
+  completedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([athleteId])
+  @@map("workout_results")
+}
+
+/// Health-adjacent personal information. Every row requires a live linked
+/// Consent - enforced at the application layer by HealthDataScopeGuard, not
+/// just by the presence of consentId here.
+model CheckIn {
+  id           String   @id @default(uuid())
+  athleteId    String
+  athlete      Athlete  @relation(fields: [athleteId], references: [id])
+  date         DateTime
+  sleepQuality Int?
+  energy       Int?
+  soreness     Int?
+  stress       Int?
+  motivation   Int?
+  pain         String?
+  consentId    String
+  consent      Consent  @relation(fields: [consentId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([athleteId])
+  @@map("check_ins")
+}
+
+model RaceGoal {
+  id                String         @id @default(uuid())
+  athleteId         String
+  athlete           Athlete        @relation(fields: [athleteId], references: [id])
+  raceName          String
+  raceDate          DateTime
+  distance          String
+  targetTimeSeconds Int?
+  status            RaceGoalStatus @default(PLANNED)
+  actualTimeSeconds Int?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([athleteId])
+  @@map("race_goals")
+}
+
+model Message {
+  id         String    @id @default(uuid())
+  senderId   String
+  sender     User      @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String?
+  receiver   User?     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  groupId    String?
+  group      Group?    @relation(fields: [groupId], references: [id])
+  content    String
+  sentAt     DateTime  @default(now())
+  readAt     DateTime?
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([groupId])
+  @@map("messages")
+}
+
+model Notification {
+  id          String               @id @default(uuid())
+  recipientId String
+  recipient   User                 @relation(fields: [recipientId], references: [id])
+  type        String
+  priority    NotificationPriority @default(MEDIUM)
+  status      NotificationStatus   @default(PENDING)
+  payload     Json?
+  sentAt      DateTime?
+  readAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([recipientId])
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// Audit log - append-only. No update/delete route is ever exposed for this.
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  actorUserId     String?
+  action          String
+  targetEntityType String
+  targetEntityId  String
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([targetEntityType, targetEntityId])
+  @@map("audit_logs")
+}

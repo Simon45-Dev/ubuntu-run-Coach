@@ -1,0 +1,70 @@
+import {
+  buildAthleteScopeFilter,
+  buildCoachScopeFilter,
+  buildOrgScopeFilter,
+} from '../../src/common/scope/scope-filters';
+import { Role } from '../../src/common/enums/role.enum';
+import { AuthContext } from '../../src/common/auth-context';
+
+describe('scope-filters', () => {
+  describe('buildAthleteScopeFilter', () => {
+    it('PLATFORM_ADMIN gets no restriction', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.PLATFORM_ADMIN };
+      expect(buildAthleteScopeFilter(ctx)).toEqual({});
+    });
+
+    it('COACH is scoped to their own coachId', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH, coachId: 'coach-1' };
+      expect(buildAthleteScopeFilter(ctx)).toEqual({ coachId: 'coach-1' });
+    });
+
+    it('COACH without a coachId throws (malformed context, not a valid scope)', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH };
+      expect(() => buildAthleteScopeFilter(ctx)).toThrow();
+    });
+
+    it('ATHLETE is scoped to their own id only', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE, athleteId: 'athlete-1' };
+      expect(buildAthleteScopeFilter(ctx)).toEqual({ id: 'athlete-1' });
+    });
+
+    it('ATHLETE without an athleteId throws', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE };
+      expect(() => buildAthleteScopeFilter(ctx)).toThrow();
+    });
+  });
+
+  describe('buildOrgScopeFilter', () => {
+    it('PLATFORM_ADMIN gets no restriction', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.PLATFORM_ADMIN };
+      expect(buildOrgScopeFilter(ctx)).toEqual({});
+    });
+
+    it('COACH is scoped to their own organisationId', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH, organisationId: 'org-1' };
+      expect(buildOrgScopeFilter(ctx)).toEqual({ organisationId: 'org-1' });
+    });
+
+    it('ATHLETE is scoped to their own organisationId', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE, organisationId: 'org-1' };
+      expect(buildOrgScopeFilter(ctx)).toEqual({ organisationId: 'org-1' });
+    });
+  });
+
+  describe('buildCoachScopeFilter', () => {
+    it('COACH is scoped to their own coach id', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH, coachId: 'coach-1' };
+      expect(buildCoachScopeFilter(ctx)).toEqual({ id: 'coach-1' });
+    });
+
+    it('ATHLETE is scoped to their assigned coach id', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE, coachId: 'coach-1' };
+      expect(buildCoachScopeFilter(ctx)).toEqual({ id: 'coach-1' });
+    });
+
+    it('ATHLETE with no assigned coach throws', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE };
+      expect(() => buildCoachScopeFilter(ctx)).toThrow();
+    });
+  });
+});

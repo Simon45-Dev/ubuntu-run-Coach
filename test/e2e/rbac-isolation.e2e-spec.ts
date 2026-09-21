@@ -1,0 +1,146 @@
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { PrismaService } from '../../src/database/prisma.service';
+import { createTestApp, cleanDatabase } from './utils/test-app';
+import {
+  createAthleteForCoach,
+  createPlatformAdmin,
+  loginAs,
+  registerCoach,
+} from './utils/fixtures';
+
+/**
+ * The highest-risk area of this slice: one athlete must never see another
+ * athlete's data, and a coach must never see another coach's roster, even
+ * within the same organisation. See src/common/guards/org-scope.guard.ts
+ * and src/common/scope/scope-filters.ts for the enforcement this exercises.
+ */
+describe('RBAC data isolation (e2e)', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+
+  beforeAll(async () => {
+    ({ app, prisma } = await createTestApp());
+  });
+
+  afterEach(async () => {
+    await cleanDatabase(prisma);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('an athlete cannot read another athlete from a different coach/org', async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const athleteA = await createAthleteForCoach(app, coachA.accessToken, coachA.coachId);
+    const athleteB = await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+
+    const athleteAToken = await loginAs(app, athleteA.email, athleteA.password);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/athletes/${athleteB.id}`)
+      .set('Authorization', `Bearer ${athleteAToken}`);
+    expect([403, 404]).toContain(res.status);
+  });
+
+  it('an athlete cannot read a peer athlete under the SAME coach - the explicit red line', async () => {
+    const coach = await registerCoach(app);
+    const athlete1 = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const athlete2 = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+
+    const athlete1Token = await loginAs(app, athlete1.email, athlete1.password);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/athletes/${athlete2.id}`)
+      .set('Authorization', `Bearer ${athlete1Token}`);
+    expect([403, 404]).toContain(res.status);
+  });
+
+  it('an athlete can read their own record', async () => {
+    const coach = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const athleteToken = await loginAs(app, athlete.email, athlete.password);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/athletes/${athlete.id}`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .expect(200);
+    expect(res.body.id).toBe(athlete.id);
+  });
+
+  it("a coach cannot list another coach's roster", async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/coaches/${coachB.coachId}/athletes`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`);
+    expect([403, 404]).toContain(res.status);
+  });
+
+  it("a coach cannot read another coach's athlete directly by id", async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const athleteB = await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/athletes/${athleteB.id}`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`);
+    expect([403, 404]).toContain(res.status);
+  });
+
+  it("a coach cannot read another organisation's Organisation or Subscription-bearing record", async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${coachB.organisationId}`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${coachB.organisationId}/coaches`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`)
+      .expect(403);
+  });
+
+  it('PLATFORM_ADMIN can cross organisations (audited writes are covered in audit-log.e2e-spec.ts)', async () => {
+    const coach = await registerCoach(app);
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${coach.organisationId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(res.body.id).toBe(coach.organisationId);
+  });
+
+  it('an athlete-role token is rejected on a coach-only route (privilege escalation attempt)', async () => {
+    const coach = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const athleteToken = await loginAs(app, athlete.email, athlete.password);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/coaches/${coach.coachId}/athletes`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .send({ email: 'escalation@example.test', password: 'TestPassword123!', name: 'X' })
+      .expect(403);
+  });
+
+  it('an athlete cannot reassign their own coach', async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coachA.accessToken, coachA.coachId);
+    const athleteToken = await loginAs(app, athlete.email, athlete.password);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/athletes/${athlete.id}`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .send({ coachId: coachB.coachId })
+      .expect(403);
+  });
+});
