@@ -119,6 +119,20 @@ export async function createWorkoutForPlan(
   return { id: res.body.id as string };
 }
 
+export async function grantHealthConsent(
+  app: INestApplication,
+  athleteAccessToken: string,
+  athleteId: string,
+) {
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/athletes/${athleteId}/consents`)
+    .set('Authorization', `Bearer ${athleteAccessToken}`)
+    .send({ consentType: 'HEALTH_CHECKIN_DATA', policyVersion: 'v1' })
+    .expect(201);
+
+  return { id: res.body.id as string };
+}
+
 /**
  * PLATFORM_ADMIN has no self-registration route by design (the API only
  * exposes coach self-signup) - seeded directly for tests, matching how a

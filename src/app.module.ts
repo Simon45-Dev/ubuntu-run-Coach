@@ -14,6 +14,8 @@ import { AthletesModule } from './modules/athletes/athletes.module';
 import { TrainingPlansModule } from './modules/training-plans/training-plans.module';
 import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { ConsentsModule } from './modules/consents/consents.module';
+import { CheckInsModule } from './modules/check-ins/check-ins.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 
 @Module({
@@ -30,6 +32,8 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     TrainingPlansModule,
     WorkoutsModule,
     MessagesModule,
+    ConsentsModule,
+    CheckInsModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: AuditLogInterceptor }],
 })
