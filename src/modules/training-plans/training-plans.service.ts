@@ -6,6 +6,15 @@ import { buildTrainingPlanScopeFilter } from '../../common/scope/scope-filters';
 import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
 
+function validatePlanDates(dto: Pick<CreateTrainingPlanDto, 'startDate' | 'endDate'>) {
+  const startDate = new Date(dto.startDate);
+  const endDate = dto.endDate ? new Date(dto.endDate) : undefined;
+  if (endDate && endDate < startDate) {
+    throw new BadRequestException('endDate must not be before startDate');
+  }
+  return { startDate, endDate };
+}
+
 @Injectable()
 export class TrainingPlansService {
   constructor(private readonly prisma: PrismaService) {}
@@ -27,11 +36,7 @@ export class TrainingPlansService {
       );
     }
 
-    const startDate = new Date(dto.startDate);
-    const endDate = dto.endDate ? new Date(dto.endDate) : undefined;
-    if (endDate && endDate < startDate) {
-      throw new BadRequestException('endDate must not be before startDate');
-    }
+    const { startDate, endDate } = validatePlanDates(dto);
 
     return this.prisma.trainingPlan.create({
       data: {
@@ -47,7 +52,40 @@ export class TrainingPlansService {
     });
   }
 
-  /** Coach must have this athlete on their own roster; admin/self unrestricted. */
+  /** Route is @Roles(COACH, PLATFORM_ADMIN) - ATHLETE never reaches here. */
+  async createForGroup(ctx: AuthContext, groupId: string, dto: CreateTrainingPlanDto) {
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, deletedAt: null },
+    });
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+    if (ctx.role === Role.COACH && group.coachId !== ctx.coachId) {
+      throw new NotFoundException('Group not found');
+    }
+
+    const { startDate, endDate } = validatePlanDates(dto);
+
+    return this.prisma.trainingPlan.create({
+      data: {
+        organisationId: group.organisationId,
+        coachId: group.coachId,
+        groupId: group.id,
+        name: dto.name,
+        startDate,
+        endDate,
+        goal: dto.goal,
+        phase: dto.phase,
+      },
+    });
+  }
+
+  /**
+   * Coach must have this athlete on their own roster; admin/self
+   * unrestricted. Includes plans assigned directly to the athlete AND plans
+   * assigned to any group they belong to - otherwise a group member's own
+   * plan list would never show their group's plan.
+   */
   async findAllForAthlete(ctx: AuthContext, athleteId: string) {
     if (ctx.role === Role.COACH) {
       const athlete = await this.prisma.athlete.findFirst({
@@ -58,7 +96,34 @@ export class TrainingPlansService {
       }
     }
     return this.prisma.trainingPlan.findMany({
-      where: { athleteId, deletedAt: null },
+      where: {
+        deletedAt: null,
+        OR: [{ athleteId }, { group: { memberships: { some: { athleteId } } } }],
+      },
+      orderBy: { startDate: 'desc' },
+    });
+  }
+
+  /** Coach must own this group; admin/member-athlete unrestricted. */
+  async findAllForGroup(ctx: AuthContext, groupId: string) {
+    if (ctx.role === Role.COACH) {
+      const group = await this.prisma.group.findFirst({
+        where: { id: groupId, deletedAt: null, coachId: ctx.coachId },
+      });
+      if (!group) {
+        throw new NotFoundException('Group not found');
+      }
+    }
+    if (ctx.role === Role.ATHLETE) {
+      const membership = await this.prisma.groupMembership.findFirst({
+        where: { groupId, athleteId: ctx.athleteId },
+      });
+      if (!membership) {
+        throw new NotFoundException('Group not found');
+      }
+    }
+    return this.prisma.trainingPlan.findMany({
+      where: { groupId, deletedAt: null },
       orderBy: { startDate: 'desc' },
     });
   }

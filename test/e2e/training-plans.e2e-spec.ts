@@ -3,8 +3,11 @@ import request from 'supertest';
 import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
 import {
+  addGroupMember,
   createAthleteForCoach,
+  createGroupForCoach,
   createTrainingPlanForAthlete,
+  loginAs,
   registerCoach,
 } from './utils/fixtures';
 
@@ -138,6 +141,42 @@ describe('Training plans (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/api/v1/training-plans/${plan.id}`)
       .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(404);
+  });
+
+  it('a group-assigned plan is visible to every member, but not to a non-member on the same roster', async () => {
+    const coach = await registerCoach(app);
+    const memberA = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const memberB = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const nonMember = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const group = await createGroupForCoach(app, coach.accessToken, coach.coachId);
+    await addGroupMember(app, coach.accessToken, group.id, memberA.id);
+    await addGroupMember(app, coach.accessToken, group.id, memberB.id);
+
+    const planRes = await request(app.getHttpServer())
+      .post(`/api/v1/groups/${group.id}/training-plans`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ name: 'Group Base Build', startDate: new Date().toISOString() })
+      .expect(201);
+
+    for (const member of [memberA, memberB]) {
+      const memberToken = await loginAs(app, member.email, member.password);
+      await request(app.getHttpServer())
+        .get(`/api/v1/training-plans/${planRes.body.id}`)
+        .set('Authorization', `Bearer ${memberToken}`)
+        .expect(200);
+
+      const listRes = await request(app.getHttpServer())
+        .get(`/api/v1/athletes/${member.id}/training-plans`)
+        .set('Authorization', `Bearer ${memberToken}`)
+        .expect(200);
+      expect(listRes.body.map((p: { id: string }) => p.id)).toContain(planRes.body.id);
+    }
+
+    const nonMemberToken = await loginAs(app, nonMember.email, nonMember.password);
+    await request(app.getHttpServer())
+      .get(`/api/v1/training-plans/${planRes.body.id}`)
+      .set('Authorization', `Bearer ${nonMemberToken}`)
       .expect(404);
   });
 });

@@ -119,6 +119,34 @@ export async function createWorkoutForPlan(
   return { id: res.body.id as string };
 }
 
+export async function createGroupForCoach(
+  app: INestApplication,
+  coachAccessToken: string,
+  coachId: string,
+  overrides: Partial<{ name: string }> = {},
+) {
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/coaches/${coachId}/groups`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({ name: overrides.name ?? 'Test Group' })
+    .expect(201);
+
+  return { id: res.body.id as string };
+}
+
+export async function addGroupMember(
+  app: INestApplication,
+  coachAccessToken: string,
+  groupId: string,
+  athleteId: string,
+) {
+  await request(app.getHttpServer())
+    .post(`/api/v1/groups/${groupId}/members`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({ athleteId })
+    .expect(201);
+}
+
 export async function grantHealthConsent(
   app: INestApplication,
   athleteAccessToken: string,

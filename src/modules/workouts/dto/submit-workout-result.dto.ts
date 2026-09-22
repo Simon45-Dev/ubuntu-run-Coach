@@ -6,11 +6,20 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  IsUUID,
   Max,
   Min,
 } from 'class-validator';
 
 export class SubmitWorkoutResultDto {
+  @ApiPropertyOptional({
+    description:
+      "Required when a coach/admin submits on behalf of an athlete for a group-assigned workout - there's no other way to know which member the result belongs to. Ignored for an athlete submitting their own result, and for individual-plan workouts (the plan's one athlete is used).",
+  })
+  @IsOptional()
+  @IsUUID()
+  athleteId?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()

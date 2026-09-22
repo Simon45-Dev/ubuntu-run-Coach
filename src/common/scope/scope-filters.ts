@@ -54,8 +54,11 @@ export function buildOrgScopeFilter(ctx: AuthContext): Record<string, unknown> {
 /**
  * Scopes a TrainingPlan query to what the caller is allowed to see:
  * - PLATFORM_ADMIN: unrestricted
- * - COACH: only plans they own
- * - ATHLETE: only plans assigned to them
+ * - COACH: only plans they own (their own coachId - true regardless of
+ *   whether a plan targets one athlete or a whole group, since coachId is
+ *   always set either way)
+ * - ATHLETE: plans assigned directly to them, OR assigned to a group they're
+ *   a member of - a single relational OR clause, not two separate queries
  *
  * Note: unlike buildAthleteScopeFilter, the ATHLETE case here returns
  * `{ athleteId: ... }` rather than `{ id: ... }` - TrainingPlan has an
@@ -74,7 +77,12 @@ export function buildTrainingPlanScopeFilter(ctx: AuthContext): Record<string, u
       if (!ctx.athleteId) {
         throw new ForbiddenException('Athlete context missing athleteId');
       }
-      return { athleteId: ctx.athleteId };
+      return {
+        OR: [
+          { athleteId: ctx.athleteId },
+          { group: { memberships: { some: { athleteId: ctx.athleteId } } } },
+        ],
+      };
     default:
       throw new ForbiddenException('Unknown role');
   }

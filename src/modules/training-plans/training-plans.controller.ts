@@ -37,6 +37,21 @@ export class TrainingPlansController {
     return this.trainingPlansService.findAllForAthlete(ctx, athleteId);
   }
 
+  @Post('groups/:groupId/training-plans')
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  createForGroup(
+    @CurrentUser() ctx: AuthContext,
+    @Param('groupId') groupId: string,
+    @Body() dto: CreateTrainingPlanDto,
+  ) {
+    return this.trainingPlansService.createForGroup(ctx, groupId, dto);
+  }
+
+  @Get('groups/:groupId/training-plans')
+  findAllForGroup(@CurrentUser() ctx: AuthContext, @Param('groupId') groupId: string) {
+    return this.trainingPlansService.findAllForGroup(ctx, groupId);
+  }
+
   @Get('training-plans/:id')
   findOne(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
     return this.trainingPlansService.findOne(ctx, id);

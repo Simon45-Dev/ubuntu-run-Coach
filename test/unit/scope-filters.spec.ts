@@ -85,9 +85,14 @@ describe('scope-filters', () => {
       expect(() => buildTrainingPlanScopeFilter(ctx)).toThrow();
     });
 
-    it('ATHLETE is scoped to plans assigned to them (via the athleteId FK, not their own id)', () => {
+    it('ATHLETE is scoped to plans assigned to them directly, or to a group they belong to', () => {
       const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE, athleteId: 'athlete-1' };
-      expect(buildTrainingPlanScopeFilter(ctx)).toEqual({ athleteId: 'athlete-1' });
+      expect(buildTrainingPlanScopeFilter(ctx)).toEqual({
+        OR: [
+          { athleteId: 'athlete-1' },
+          { group: { memberships: { some: { athleteId: 'athlete-1' } } } },
+        ],
+      });
     });
 
     it('ATHLETE without an athleteId throws', () => {

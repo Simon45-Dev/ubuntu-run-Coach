@@ -286,8 +286,8 @@ model Consent {
 }
 
 // ---------------------------------------------------------------------------
-// Schema-only still: Group, RaceGoal, Notification. No controllers/services
-// yet. TrainingPlan, Workout, WorkoutResult, CheckIn, Message all have APIs.
+// Schema-only still: RaceGoal, Notification. No controllers/services yet.
+// TrainingPlan, Workout, WorkoutResult, CheckIn, Message, Group all have APIs.
 // ---------------------------------------------------------------------------
 
 model Group {
@@ -365,7 +365,7 @@ model Workout {
   rpeTarget         Int?
   instructions      String?
 
-  result WorkoutResult?
+  results WorkoutResult[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -375,9 +375,13 @@ model Workout {
   @@map("workouts")
 }
 
+/// One row per (workout, athlete) - not one per workout - so a group-assigned
+/// workout can carry an independent result for each member. Individual-plan
+/// workouts only ever have one athlete anyway, so this is a strict superset
+/// of the old workoutId-only-unique behaviour, not a narrowing of it.
 model WorkoutResult {
   id                String   @id @default(uuid())
-  workoutId         String   @unique
+  workoutId         String
   workout           Workout  @relation(fields: [workoutId], references: [id])
   athleteId         String
   athlete           Athlete  @relation(fields: [athleteId], references: [id])
@@ -393,6 +397,8 @@ model WorkoutResult {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([workoutId, athleteId])
+  @@index([workoutId])
   @@index([athleteId])
   @@map("workout_results")
 }

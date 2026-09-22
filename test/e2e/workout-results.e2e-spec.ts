@@ -3,9 +3,12 @@ import request from 'supertest';
 import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
 import {
+  addGroupMember,
   createAthleteForCoach,
+  createGroupForCoach,
   createTrainingPlanForAthlete,
   createWorkoutForPlan,
+  loginAs,
   registerCoach,
 } from './utils/fixtures';
 
@@ -104,5 +107,96 @@ describe('Workout results (e2e)', () => {
 
     const results = await prisma.workoutResult.findMany({ where: { workoutId: workout.id } });
     expect(results).toHaveLength(1);
+  });
+
+  async function createGroupWorkout(
+    app: INestApplication,
+    coach: { accessToken: string; coachId: string },
+  ) {
+    const group = await createGroupForCoach(app, coach.accessToken, coach.coachId);
+    const planRes = await request(app.getHttpServer())
+      .post(`/api/v1/groups/${group.id}/training-plans`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ name: 'Group Plan', startDate: new Date().toISOString() })
+      .expect(201);
+    const workoutRes = await request(app.getHttpServer())
+      .post(`/api/v1/training-plans/${planRes.body.id}/workouts`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ scheduledDate: new Date().toISOString(), type: 'EASY' })
+      .expect(201);
+    return { groupId: group.id as string, workoutId: workoutRes.body.id as string };
+  }
+
+  it('two members of the same group each get an independent result for the same shared workout', async () => {
+    const coach = await registerCoach(app);
+    const memberA = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const memberB = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const { groupId, workoutId } = await createGroupWorkout(app, coach);
+    await addGroupMember(app, coach.accessToken, groupId, memberA.id);
+    await addGroupMember(app, coach.accessToken, groupId, memberB.id);
+
+    await request(app.getHttpServer())
+      .put(`/api/v1/workouts/${workoutId}/result`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ athleteId: memberA.id, rpe: 3 })
+      .expect(200);
+    await request(app.getHttpServer())
+      .put(`/api/v1/workouts/${workoutId}/result`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ athleteId: memberB.id, rpe: 8 })
+      .expect(200);
+
+    const allRes = await request(app.getHttpServer())
+      .get(`/api/v1/workouts/${workoutId}/results`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+    expect(allRes.body).toHaveLength(2);
+    const rpeByAthlete = Object.fromEntries(
+      allRes.body.map((r: { athleteId: string; rpe: number }) => [r.athleteId, r.rpe]),
+    );
+    expect(rpeByAthlete[memberA.id]).toBe(3);
+    expect(rpeByAthlete[memberB.id]).toBe(8);
+  });
+
+  it('a group member submits their own result for a shared workout without specifying athleteId', async () => {
+    const coach = await registerCoach(app);
+    const member = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const { groupId, workoutId } = await createGroupWorkout(app, coach);
+    await addGroupMember(app, coach.accessToken, groupId, member.id);
+    const memberToken = await loginAs(app, member.email, member.password);
+
+    await request(app.getHttpServer())
+      .put(`/api/v1/workouts/${workoutId}/result`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ rpe: 6 })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/workouts/${workoutId}/result`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(200);
+    expect(res.body.rpe).toBe(6);
+  });
+
+  it('GET /workouts/:id/result without ?athleteId= on a group workout is rejected for a coach', async () => {
+    const coach = await registerCoach(app);
+    const { workoutId } = await createGroupWorkout(app, coach);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/workouts/${workoutId}/result`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(400);
+  });
+
+  it('a coach cannot submit a group result for an athlete who is not a member', async () => {
+    const coach = await registerCoach(app);
+    const outsider = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const { workoutId } = await createGroupWorkout(app, coach);
+
+    await request(app.getHttpServer())
+      .put(`/api/v1/workouts/${workoutId}/result`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ athleteId: outsider.id, rpe: 5 })
+      .expect(404);
   });
 });
