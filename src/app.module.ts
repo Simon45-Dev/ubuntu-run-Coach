@@ -12,6 +12,7 @@ import { OrganisationsModule } from './modules/organisations/organisations.modul
 import { CoachesModule } from './modules/coaches/coaches.module';
 import { AthletesModule } from './modules/athletes/athletes.module';
 import { GroupsModule } from './modules/groups/groups.module';
+import { TemplatesModule } from './modules/templates/templates.module';
 import { TrainingPlansModule } from './modules/training-plans/training-plans.module';
 import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { MessagesModule } from './modules/messages/messages.module';
@@ -31,6 +32,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     CoachesModule,
     AthletesModule,
     GroupsModule,
+    TemplatesModule,
     TrainingPlansModule,
     WorkoutsModule,
     MessagesModule,

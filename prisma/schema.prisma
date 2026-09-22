@@ -199,9 +199,10 @@ model Coach {
   experienceYears Int?
   athleteLimit    Int?
 
-  athletes      Athlete[]
-  groups        Group[]
-  trainingPlans TrainingPlan[]
+  athletes              Athlete[]
+  groups                Group[]
+  trainingPlans         TrainingPlan[]
+  trainingPlanTemplates TrainingPlanTemplate[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -340,6 +341,12 @@ model TrainingPlan {
   version     Int                 @default(1)
   status      TrainingPlanStatus  @default(DRAFT)
 
+  /// Provenance only - which template (if any) this plan was created from.
+  /// Never edited after creation; the plan is an independent copy, not a
+  /// live reference, so later changes to the template don't affect it.
+  sourceTemplateId String?
+  sourceTemplate   TrainingPlanTemplate? @relation(fields: [sourceTemplateId], references: [id])
+
   workouts Workout[]
 
   createdAt DateTime  @default(now())
@@ -401,6 +408,53 @@ model WorkoutResult {
   @@index([workoutId])
   @@index([athleteId])
   @@map("workout_results")
+}
+
+/// A reusable, coach-owned skeleton - never athlete-facing. Workouts are
+/// defined by day offset from an eventual start date, not real dates, since
+/// a template has no start date of its own until it's applied.
+model TrainingPlanTemplate {
+  id             String             @id @default(uuid())
+  organisationId String
+  coachId        String
+  coach          Coach              @relation(fields: [coachId], references: [id])
+  name           String
+  goal           String?
+  phase          TrainingPlanPhase?
+
+  workouts     TemplateWorkout[]
+  plansCreated TrainingPlan[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([coachId])
+  @@index([organisationId])
+  @@map("training_plan_templates")
+}
+
+/// No deletedAt - applying a template copies its data into real Workout
+/// rows, so nothing ever references a TemplateWorkout row directly; removing
+/// one from a template is a plain hard delete.
+model TemplateWorkout {
+  id                String               @id @default(uuid())
+  templateId        String
+  template          TrainingPlanTemplate @relation(fields: [templateId], references: [id])
+  dayOffset         Int
+  type              WorkoutType
+  distanceTargetKm  Decimal?
+  durationTargetSec Int?
+  paceTarget        String?
+  hrZoneTarget      String?
+  rpeTarget         Int?
+  instructions      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([templateId])
+  @@map("template_workouts")
 }
 
 /// Health-adjacent personal information. Every row requires a live linked

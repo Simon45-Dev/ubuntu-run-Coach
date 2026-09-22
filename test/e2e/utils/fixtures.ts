@@ -147,6 +147,36 @@ export async function addGroupMember(
     .expect(201);
 }
 
+export async function createTemplateForCoach(
+  app: INestApplication,
+  coachAccessToken: string,
+  coachId: string,
+  overrides: Partial<{ name: string; goal: string }> = {},
+) {
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/coaches/${coachId}/templates`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({ name: overrides.name ?? 'Test Template', goal: overrides.goal })
+    .expect(201);
+
+  return { id: res.body.id as string };
+}
+
+export async function addTemplateWorkout(
+  app: INestApplication,
+  coachAccessToken: string,
+  templateId: string,
+  overrides: Partial<{ dayOffset: number; type: string }> = {},
+) {
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/templates/${templateId}/workouts`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({ dayOffset: overrides.dayOffset ?? 0, type: overrides.type ?? 'EASY' })
+    .expect(201);
+
+  return res.body;
+}
+
 export async function grantHealthConsent(
   app: INestApplication,
   athleteAccessToken: string,
