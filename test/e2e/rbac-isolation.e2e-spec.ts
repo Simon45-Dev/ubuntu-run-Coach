@@ -258,4 +258,23 @@ describe('RBAC data isolation (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
   });
+
+  it('a coach cannot read the message thread between another coach and their own athlete', async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const athleteB = await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+    const athleteBToken = await loginAs(app, athleteB.email, athleteB.password);
+    const athleteBMe = await request(app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${athleteBToken}`)
+      .expect(200);
+
+    // Coach A guessing at Athlete B's userId can't read a thread they were
+    // never part of - the relationship check, not just object ownership,
+    // is what blocks this.
+    await request(app.getHttpServer())
+      .get(`/api/v1/users/${athleteBMe.body.userId}/messages`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`)
+      .expect(404);
+  });
 });

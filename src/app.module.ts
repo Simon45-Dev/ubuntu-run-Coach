@@ -13,6 +13,7 @@ import { CoachesModule } from './modules/coaches/coaches.module';
 import { AthletesModule } from './modules/athletes/athletes.module';
 import { TrainingPlansModule } from './modules/training-plans/training-plans.module';
 import { WorkoutsModule } from './modules/workouts/workouts.module';
+import { MessagesModule } from './modules/messages/messages.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 
 @Module({
@@ -28,6 +29,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     AthletesModule,
     TrainingPlansModule,
     WorkoutsModule,
+    MessagesModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: AuditLogInterceptor }],
 })
