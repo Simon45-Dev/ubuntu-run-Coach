@@ -11,6 +11,8 @@ import { UsersModule } from './modules/users/users.module';
 import { OrganisationsModule } from './modules/organisations/organisations.module';
 import { CoachesModule } from './modules/coaches/coaches.module';
 import { AthletesModule } from './modules/athletes/athletes.module';
+import { TrainingPlansModule } from './modules/training-plans/training-plans.module';
+import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 
 @Module({
@@ -24,6 +26,8 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     OrganisationsModule,
     CoachesModule,
     AthletesModule,
+    TrainingPlansModule,
+    WorkoutsModule,
   ],
   providers: [{ provide: APP_INTERCEPTOR, useClass: AuditLogInterceptor }],
 })

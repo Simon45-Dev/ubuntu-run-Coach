@@ -52,6 +52,35 @@ export function buildOrgScopeFilter(ctx: AuthContext): Record<string, unknown> {
 }
 
 /**
+ * Scopes a TrainingPlan query to what the caller is allowed to see:
+ * - PLATFORM_ADMIN: unrestricted
+ * - COACH: only plans they own
+ * - ATHLETE: only plans assigned to them
+ *
+ * Note: unlike buildAthleteScopeFilter, the ATHLETE case here returns
+ * `{ athleteId: ... }` rather than `{ id: ... }` - TrainingPlan has an
+ * athleteId FK column, it isn't the Athlete table's own PK.
+ */
+export function buildTrainingPlanScopeFilter(ctx: AuthContext): Record<string, unknown> {
+  switch (ctx.role) {
+    case Role.PLATFORM_ADMIN:
+      return {};
+    case Role.COACH:
+      if (!ctx.coachId) {
+        throw new ForbiddenException('Coach context missing coachId');
+      }
+      return { coachId: ctx.coachId };
+    case Role.ATHLETE:
+      if (!ctx.athleteId) {
+        throw new ForbiddenException('Athlete context missing athleteId');
+      }
+      return { athleteId: ctx.athleteId };
+    default:
+      throw new ForbiddenException('Unknown role');
+  }
+}
+
+/**
  * Scopes a Coach-record query specifically (id field, not organisationId):
  * - PLATFORM_ADMIN: unrestricted
  * - COACH: only their own coach record

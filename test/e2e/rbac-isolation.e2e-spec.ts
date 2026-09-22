@@ -5,6 +5,8 @@ import { createTestApp, cleanDatabase } from './utils/test-app';
 import {
   createAthleteForCoach,
   createPlatformAdmin,
+  createTrainingPlanForAthlete,
+  createWorkoutForPlan,
   loginAs,
   registerCoach,
 } from './utils/fixtures';
@@ -142,5 +144,118 @@ describe('RBAC data isolation (e2e)', () => {
       .set('Authorization', `Bearer ${athleteToken}`)
       .send({ coachId: coachB.coachId })
       .expect(403);
+  });
+
+  it("an athlete cannot read another athlete's training plan (different coach)", async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const athleteA = await createAthleteForCoach(app, coachA.accessToken, coachA.coachId);
+    const athleteB = await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+    const planB = await createTrainingPlanForAthlete(app, coachB.accessToken, athleteB.id);
+
+    const athleteAToken = await loginAs(app, athleteA.email, athleteA.password);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/training-plans/${planB.id}`)
+      .set('Authorization', `Bearer ${athleteAToken}`)
+      .expect(404);
+  });
+
+  it("an athlete cannot read a peer athlete's training plan under the SAME coach", async () => {
+    const coach = await registerCoach(app);
+    const athlete1 = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const athlete2 = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const plan2 = await createTrainingPlanForAthlete(app, coach.accessToken, athlete2.id);
+
+    const athlete1Token = await loginAs(app, athlete1.email, athlete1.password);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/training-plans/${plan2.id}`)
+      .set('Authorization', `Bearer ${athlete1Token}`)
+      .expect(404);
+  });
+
+  it("a coach cannot read another coach's training plan or workout, even same org", async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const athleteB = await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+    const planB = await createTrainingPlanForAthlete(app, coachB.accessToken, athleteB.id);
+    const workoutB = await createWorkoutForPlan(app, coachB.accessToken, planB.id);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/training-plans/${planB.id}`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/workouts/${workoutB.id}`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`)
+      .expect(404);
+  });
+
+  it("an athlete cannot read or submit a result for another athlete's workout", async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const athleteA = await createAthleteForCoach(app, coachA.accessToken, coachA.coachId);
+    const athleteB = await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+    const planB = await createTrainingPlanForAthlete(app, coachB.accessToken, athleteB.id);
+    const workoutB = await createWorkoutForPlan(app, coachB.accessToken, planB.id);
+
+    const athleteAToken = await loginAs(app, athleteA.email, athleteA.password);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/workouts/${workoutB.id}/result`)
+      .set('Authorization', `Bearer ${athleteAToken}`)
+      .expect(404);
+
+    await request(app.getHttpServer())
+      .put(`/api/v1/workouts/${workoutB.id}/result`)
+      .set('Authorization', `Bearer ${athleteAToken}`)
+      .send({ rpe: 5 })
+      .expect(404);
+  });
+
+  it('an athlete-role token is rejected on training-plan/workout write routes (privilege escalation attempt)', async () => {
+    const coach = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const plan = await createTrainingPlanForAthlete(app, coach.accessToken, athlete.id);
+    const workout = await createWorkoutForPlan(app, coach.accessToken, plan.id);
+    const athleteToken = await loginAs(app, athlete.email, athlete.password);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/athletes/${athlete.id}/training-plans`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .send({ name: 'Escalation', startDate: new Date().toISOString() })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/training-plans/${plan.id}/workouts`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .send({ scheduledDate: new Date().toISOString(), type: 'EASY' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/workouts/${workout.id}`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .expect(403);
+  });
+
+  it('PLATFORM_ADMIN can read training plans and workouts across organisations', async () => {
+    const coach = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const plan = await createTrainingPlanForAthlete(app, coach.accessToken, athlete.id);
+    const workout = await createWorkoutForPlan(app, coach.accessToken, plan.id);
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/training-plans/${plan.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/workouts/${workout.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
   });
 });

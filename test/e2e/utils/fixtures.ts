@@ -72,6 +72,53 @@ export async function loginAs(app: INestApplication, email: string, password: st
   return res.body.accessToken as string;
 }
 
+export async function createTrainingPlanForAthlete(
+  app: INestApplication,
+  coachAccessToken: string,
+  athleteId: string,
+  overrides: Partial<{
+    name: string;
+    startDate: string;
+    endDate: string;
+    goal: string;
+  }> = {},
+) {
+  const startDate = overrides.startDate ?? new Date().toISOString();
+  const endDate =
+    overrides.endDate ?? new Date(Date.now() + 84 * 24 * 60 * 60 * 1000).toISOString();
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/athletes/${athleteId}/training-plans`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({
+      name: overrides.name ?? 'Test Training Plan',
+      startDate,
+      endDate,
+      goal: overrides.goal,
+    })
+    .expect(201);
+
+  return { id: res.body.id as string, startDate, endDate };
+}
+
+export async function createWorkoutForPlan(
+  app: INestApplication,
+  coachAccessToken: string,
+  trainingPlanId: string,
+  overrides: Partial<{ scheduledDate: string; type: string; instructions: string }> = {},
+) {
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/training-plans/${trainingPlanId}/workouts`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({
+      scheduledDate: overrides.scheduledDate ?? new Date().toISOString(),
+      type: overrides.type ?? 'EASY',
+      instructions: overrides.instructions,
+    })
+    .expect(201);
+
+  return { id: res.body.id as string };
+}
+
 /**
  * PLATFORM_ADMIN has no self-registration route by design (the API only
  * exposes coach self-signup) - seeded directly for tests, matching how a

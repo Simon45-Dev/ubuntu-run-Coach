@@ -2,6 +2,7 @@ import {
   buildAthleteScopeFilter,
   buildCoachScopeFilter,
   buildOrgScopeFilter,
+  buildTrainingPlanScopeFilter,
 } from '../../src/common/scope/scope-filters';
 import { Role } from '../../src/common/enums/role.enum';
 import { AuthContext } from '../../src/common/auth-context';
@@ -65,6 +66,33 @@ describe('scope-filters', () => {
     it('ATHLETE with no assigned coach throws', () => {
       const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE };
       expect(() => buildCoachScopeFilter(ctx)).toThrow();
+    });
+  });
+
+  describe('buildTrainingPlanScopeFilter', () => {
+    it('PLATFORM_ADMIN gets no restriction', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.PLATFORM_ADMIN };
+      expect(buildTrainingPlanScopeFilter(ctx)).toEqual({});
+    });
+
+    it('COACH is scoped to plans they own', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH, coachId: 'coach-1' };
+      expect(buildTrainingPlanScopeFilter(ctx)).toEqual({ coachId: 'coach-1' });
+    });
+
+    it('COACH without a coachId throws', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH };
+      expect(() => buildTrainingPlanScopeFilter(ctx)).toThrow();
+    });
+
+    it('ATHLETE is scoped to plans assigned to them (via the athleteId FK, not their own id)', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE, athleteId: 'athlete-1' };
+      expect(buildTrainingPlanScopeFilter(ctx)).toEqual({ athleteId: 'athlete-1' });
+    });
+
+    it('ATHLETE without an athleteId throws', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE };
+      expect(() => buildTrainingPlanScopeFilter(ctx)).toThrow();
     });
   });
 });
