@@ -9,7 +9,15 @@ import { buildAthleteScopeFilter } from '../../common/scope/scope-filters';
 import { CreateAthleteDto } from './dto/create-athlete.dto';
 import { UpdateAthleteDto } from './dto/update-athlete.dto';
 
-const ATHLETE_INCLUDE = { user: { select: { id: true, email: true, name: true, status: true } } };
+// `coach` is included (not just coachId) so an athlete's own profile response
+// can surface who their coach is - e.g. for the web dashboard's messaging UI,
+// which needs the coach's userId to address a message without a separate
+// lookup the athlete isn't permitted to make (GET /coaches/:id is COACH/ADMIN
+// only - see OrgScopeGuard's 'coach' scope case).
+const ATHLETE_INCLUDE = {
+  user: { select: { id: true, email: true, name: true, status: true } },
+  coach: { select: { id: true, user: { select: { id: true, name: true } } } },
+};
 
 /**
  * `Record<string, unknown>` (the DTO's type) isn't structurally assignable

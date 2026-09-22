@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+
+/* Ubuntu Run Brand Guidelines v1.1 - Section 9 (colour) and Section 11 (type) */
+:root {
+  --color-navy: #0d1b2a;
+  --color-green: #2e7d32;
+  --color-orange: #f39c12;
+  --color-mist: #f4f7f8;
+  --color-white: #ffffff;
+
+  /* Status system - Section 18. Colour is always paired with text/icon, never used alone. */
+  --color-status-good: var(--color-green);
+  --color-status-watch: var(--color-orange);
+  --color-status-attention: #c0392b;
+  --color-status-inactive: #9aa5b1;
+}
+
+@theme {
+  --font-sans: 'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --color-navy: var(--color-navy);
+  --color-green: var(--color-green);
+  --color-orange: var(--color-orange);
+  --color-mist: var(--color-mist);
+
+  --color-status-good: var(--color-status-good);
+  --color-status-watch: var(--color-status-watch);
+  --color-status-attention: var(--color-status-attention);
+  --color-status-inactive: var(--color-status-inactive);
+}
+
+body {
+  @apply bg-mist text-navy antialiased;
+  font-family: var(--font-sans);
+}
