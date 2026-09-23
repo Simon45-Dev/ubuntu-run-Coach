@@ -6,6 +6,8 @@ import { AxiosError } from 'axios'
 import { Plus } from 'lucide-react'
 import { getOrganisation } from '@/api/organisations'
 import { listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
+import { listRoster } from '@/api/athletes'
+import type { Coach } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { FullPageSpinner } from '@/components/Spinner'
@@ -20,6 +22,13 @@ const statusVariant = {
   DEACTIVATED: 'inactive',
 } as const
 
+async function loadAthleteCounts(coaches: Coach[]): Promise<Record<string, number>> {
+  const counts = await Promise.all(
+    coaches.map(async (coach) => [coach.id, (await listRoster(coach.id)).length] as const),
+  )
+  return Object.fromEntries(counts)
+}
+
 export function OrganisationDetailPage() {
   const { organisationId } = useParams<{ organisationId: string }>()
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -33,6 +42,11 @@ export function OrganisationDetailPage() {
     queryKey: ['coaches', organisationId],
     queryFn: () => listCoachesForOrganisation(organisationId!),
     enabled: !!organisationId,
+  })
+  const { data: athleteCounts } = useQuery({
+    queryKey: ['coach-athlete-counts', organisationId, coaches?.map((c) => c.id)],
+    queryFn: () => loadAthleteCounts(coaches!),
+    enabled: !!coaches && coaches.length > 0,
   })
 
   const resendMutation = useMutation({
@@ -81,6 +95,7 @@ export function OrganisationDetailPage() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Athletes</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -92,6 +107,7 @@ export function OrganisationDetailPage() {
                 <TableCell>
                   <Badge variant={statusVariant[coach.user.status]}>{coach.user.status}</Badge>
                 </TableCell>
+                <TableCell className="text-navy/60">{athleteCounts?.[coach.id] ?? '-'}</TableCell>
                 <TableCell>
                   {coach.user.status === 'INVITED' && (
                     <Button
