@@ -20,3 +20,13 @@ export async function createOrganisation(input: CreateOrganisationInput): Promis
   const res = await apiClient.post<Organisation>('/organisations', input)
   return res.data
 }
+
+export interface UpdateOrganisationInput {
+  name?: string
+  type?: OrganisationType
+}
+
+export async function updateOrganisation(id: string, input: UpdateOrganisationInput): Promise<Organisation> {
+  const res = await apiClient.patch<Organisation>(`/organisations/${id}`, input)
+  return res.data
+}

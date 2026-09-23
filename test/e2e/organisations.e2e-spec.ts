@@ -37,6 +37,20 @@ describe('Organisations (e2e)', () => {
     expect(patchRes.body.name).toBe('Renamed Org');
   });
 
+  it('PLATFORM_ADMIN can update an organisation\'s name and type', async () => {
+    const coach = await registerCoach(app, { organisationName: 'Original Name' });
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    const patchRes = await request(app.getHttpServer())
+      .patch(`/api/v1/organisations/${coach.organisationId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Admin Renamed Org', type: 'CLUB' })
+      .expect(200);
+    expect(patchRes.body.name).toBe('Admin Renamed Org');
+    expect(patchRes.body.type).toBe('CLUB');
+  });
+
   it('rejects an empty organisation name on update', async () => {
     const coach = await registerCoach(app);
     await request(app.getHttpServer())

@@ -3,17 +3,19 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { Plus } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
 import { getOrganisation } from '@/api/organisations'
 import { listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
 import { listRoster } from '@/api/athletes'
 import type { Coach } from '@/api/types'
+import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { InviteCoachDialog } from './InviteCoachDialog'
+import { EditOrganisationDialog } from './EditOrganisationDialog'
 
 const statusVariant = {
   ACTIVE: 'good',
@@ -46,7 +48,10 @@ async function loadAthleteCounts(coaches: Coach[]): Promise<Record<string, numbe
 export function OrganisationDetailPage({ organisationId: organisationIdProp }: { organisationId?: string } = {}) {
   const params = useParams<{ organisationId: string }>()
   const organisationId = organisationIdProp ?? params.organisationId
+  const { ctx } = useAuth()
+  const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   const { data: organisation, isLoading: orgLoading } = useQuery({
     queryKey: ['organisation', organisationId],
@@ -80,9 +85,17 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-navy">{organisation.name}</h1>
-        <p className="text-sm text-navy/60">{organisation.type}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-navy">{organisation.name}</h1>
+          <p className="text-sm text-navy/60">{organisation.type}</p>
+        </div>
+        {isAdmin && (
+          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil className="h-4 w-4" />
+            Edit
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center justify-between">
@@ -143,6 +156,9 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
 
       {organisationId && (
         <InviteCoachDialog organisationId={organisationId} open={inviteOpen} onOpenChange={setInviteOpen} />
+      )}
+      {isAdmin && (
+        <EditOrganisationDialog organisation={organisation} open={editOpen} onOpenChange={setEditOpen} />
       )}
     </div>
   )
