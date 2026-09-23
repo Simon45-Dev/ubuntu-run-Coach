@@ -1,3 +1,5 @@
+import { basename, join } from 'path';
+import { unlink } from 'fs/promises';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -14,8 +16,22 @@ const PUBLIC_USER_SELECT = {
   role: true,
   status: true,
   mfaEnabled: true,
+  avatarUrl: true,
   createdAt: true,
 } as const;
+
+function avatarUrlToPath(avatarUrl: string): string {
+  return join(process.cwd(), 'uploads', 'avatars', basename(avatarUrl));
+}
+
+async function deleteAvatarFile(avatarUrl: string | null): Promise<void> {
+  if (!avatarUrl) return;
+  try {
+    await unlink(avatarUrlToPath(avatarUrl));
+  } catch {
+    // Best-effort cleanup - a missing file is not an error the caller needs to see.
+  }
+}
 
 @Injectable()
 export class UsersService {
@@ -32,6 +48,32 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: ctx.userId },
       data: { name: dto.name },
+      select: PUBLIC_USER_SELECT,
+    });
+  }
+
+  async uploadAvatar(ctx: AuthContext, filename: string) {
+    const existing = await this.prisma.user.findUniqueOrThrow({
+      where: { id: ctx.userId },
+      select: { avatarUrl: true },
+    });
+    await deleteAvatarFile(existing.avatarUrl);
+    return this.prisma.user.update({
+      where: { id: ctx.userId },
+      data: { avatarUrl: `/uploads/avatars/${filename}` },
+      select: PUBLIC_USER_SELECT,
+    });
+  }
+
+  async deleteAvatar(ctx: AuthContext) {
+    const existing = await this.prisma.user.findUniqueOrThrow({
+      where: { id: ctx.userId },
+      select: { avatarUrl: true },
+    });
+    await deleteAvatarFile(existing.avatarUrl);
+    return this.prisma.user.update({
+      where: { id: ctx.userId },
+      data: { avatarUrl: null },
       select: PUBLIC_USER_SELECT,
     });
   }

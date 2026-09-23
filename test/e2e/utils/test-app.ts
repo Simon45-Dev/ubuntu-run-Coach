@@ -1,14 +1,20 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { mkdirSync } from 'fs';
+import { join } from 'path';
+import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import { AppModule } from '../../../src/app.module';
 import { PrismaService } from '../../../src/database/prisma.service';
 import { HttpExceptionFilter } from '../../../src/common/filters/http-exception.filter';
 
-export async function createTestApp(): Promise<{ app: INestApplication; prisma: PrismaService }> {
+export async function createTestApp(): Promise<{ app: NestExpressApplication; prisma: PrismaService }> {
+  mkdirSync(join(process.cwd(), 'uploads', 'avatars'), { recursive: true });
+
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
 
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication<NestExpressApplication>();
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
   app.use(cookieParser());
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(

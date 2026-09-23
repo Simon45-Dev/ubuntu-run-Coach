@@ -52,6 +52,7 @@ export interface PublicUser {
   role: Role
   status: UserStatus
   mfaEnabled: boolean
+  avatarUrl: string | null
   createdAt: string
 }
 

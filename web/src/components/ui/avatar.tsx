@@ -21,9 +21,18 @@ function initials(name: string): string {
   return (first + last).toUpperCase()
 }
 
-export function AvatarInitials({ name, className }: { name: string; className?: string }) {
+export function AvatarInitials({
+  name,
+  src,
+  className,
+}: {
+  name: string
+  src?: string | null
+  className?: string
+}) {
   return (
     <Avatar className={className}>
+      {src && <AvatarPrimitive.Image src={src} alt={name} className="h-full w-full object-cover" />}
       <AvatarPrimitive.Fallback className="flex h-full w-full items-center justify-center bg-green/15 text-sm font-semibold text-green">
         {initials(name)}
       </AvatarPrimitive.Fallback>

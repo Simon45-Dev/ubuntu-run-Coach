@@ -1,4 +1,5 @@
 import { format, parseISO } from 'date-fns'
+import { assetBaseUrl } from '@/api/client'
 
 export function formatDate(value: string | Date, pattern = 'd MMM yyyy'): string {
   const date = typeof value === 'string' ? parseISO(value) : value
@@ -18,4 +19,8 @@ export function formatDistance(km?: number | string | null): string {
   if (km === undefined || km === null) return '-'
   const n = typeof km === 'string' ? Number(km) : km
   return `${n.toFixed(2)} km`
+}
+
+export function resolveAvatarUrl(avatarUrl: string | null | undefined): string | undefined {
+  return avatarUrl ? `${assetBaseUrl}${avatarUrl}` : undefined
 }

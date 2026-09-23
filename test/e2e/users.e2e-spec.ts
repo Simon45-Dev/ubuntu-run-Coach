@@ -1,8 +1,20 @@
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
 import { createPlatformAdmin, loginAs, registerCoach } from './utils/fixtures';
+
+// Smallest possible valid 1x1 PNG.
+const PNG_BUFFER = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
+
+function avatarPath(avatarUrl: string): string {
+  return join(process.cwd(), 'uploads', 'avatars', avatarUrl.split('/').pop()!);
+}
 
 describe('Users (e2e)', () => {
   let app: INestApplication;
@@ -39,6 +51,46 @@ describe('Users (e2e)', () => {
       .send({ name: 'Updated Name' })
       .expect(200);
     expect(res.body.name).toBe('Updated Name');
+  });
+
+  it('POST /users/me/avatar uploads, replaces, and serves a profile picture', async () => {
+    const coach = await registerCoach(app);
+
+    const first = await request(app.getHttpServer())
+      .post('/api/v1/users/me/avatar')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .attach('file', PNG_BUFFER, { filename: 'avatar.png', contentType: 'image/png' })
+      .expect(201);
+    expect(first.body.avatarUrl).toMatch(/^\/uploads\/avatars\/.+\.png$/);
+    const firstPath = avatarPath(first.body.avatarUrl);
+    expect(existsSync(firstPath)).toBe(true);
+
+    await request(app.getHttpServer()).get(first.body.avatarUrl).expect(200);
+
+    const second = await request(app.getHttpServer())
+      .post('/api/v1/users/me/avatar')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .attach('file', PNG_BUFFER, { filename: 'avatar2.png', contentType: 'image/png' })
+      .expect(201);
+    expect(second.body.avatarUrl).not.toBe(first.body.avatarUrl);
+    expect(existsSync(firstPath)).toBe(false);
+    expect(existsSync(avatarPath(second.body.avatarUrl))).toBe(true);
+
+    await request(app.getHttpServer())
+      .delete('/api/v1/users/me/avatar')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200)
+      .expect((res) => expect(res.body.avatarUrl).toBeNull());
+    expect(existsSync(avatarPath(second.body.avatarUrl))).toBe(false);
+  });
+
+  it('POST /users/me/avatar rejects a non-image file', async () => {
+    const coach = await registerCoach(app);
+    await request(app.getHttpServer())
+      .post('/api/v1/users/me/avatar')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .attach('file', Buffer.from('not an image'), { filename: 'notes.txt', contentType: 'text/plain' })
+      .expect(415);
   });
 
   it('rejects invalid input on registration (bad email, short password)', async () => {

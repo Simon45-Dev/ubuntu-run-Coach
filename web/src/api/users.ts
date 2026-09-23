@@ -24,3 +24,15 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
 export async function deleteUser(id: string): Promise<void> {
   await apiClient.delete(`/users/${id}`)
 }
+
+export async function uploadAvatar(file: File): Promise<PublicUser> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await apiClient.post<PublicUser>('/users/me/avatar', formData)
+  return res.data
+}
+
+export async function deleteAvatar(): Promise<PublicUser> {
+  const res = await apiClient.delete<PublicUser>('/users/me/avatar')
+  return res.data
+}

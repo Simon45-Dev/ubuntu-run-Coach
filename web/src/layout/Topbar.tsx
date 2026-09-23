@@ -6,6 +6,7 @@ import { listNotifications } from '@/api/notifications'
 import { getCurrentUser } from '@/api/users'
 import { useAuth } from '@/auth/AuthProvider'
 import { AvatarInitials } from '@/components/ui/avatar'
+import { resolveAvatarUrl } from '@/lib/format'
 
 const ROLE_LABELS = { COACH: 'Coach', ATHLETE: 'Athlete', PLATFORM_ADMIN: 'Platform Admin' } as const
 
@@ -51,7 +52,7 @@ export function Topbar() {
           onClick={() => setMenuOpen((open) => !open)}
           className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-mist"
         >
-          <AvatarInitials name={user?.name ?? '?'} />
+          <AvatarInitials name={user?.name ?? '?'} src={resolveAvatarUrl(user?.avatarUrl)} />
           <div className="text-left">
             <p className="text-sm font-medium text-navy">{user?.name ?? 'Loading...'}</p>
             {ctx?.role && <p className="text-xs text-navy/50">{ROLE_LABELS[ctx.role]}</p>}

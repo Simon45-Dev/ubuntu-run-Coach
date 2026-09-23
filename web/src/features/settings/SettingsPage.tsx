@@ -6,15 +6,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { disableMfa, enableMfa, verifyMfa } from '@/api/auth'
-import { getCurrentUser } from '@/api/users'
+import { deleteAvatar, getCurrentUser, uploadAvatar } from '@/api/users'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FullPageSpinner } from '@/components/Spinner'
+import { AvatarInitials } from '@/components/ui/avatar'
+import { resolveAvatarUrl } from '@/lib/format'
 
 const codeSchema = z.object({ code: z.string().length(6, 'Enter the 6-digit code') })
 type CodeForm = z.infer<typeof codeSchema>
+
+const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const AVATAR_MAX_BYTES = 2_000_000
 
 function errorMessage(err: unknown, fallback: string): string {
   const message =
@@ -27,8 +32,40 @@ function errorMessage(err: unknown, fallback: string): string {
 export function SettingsPage() {
   const queryClient = useQueryClient()
   const [enrolment, setEnrolment] = useState<{ secret: string } | null>(null)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   const { data: user, isLoading } = useQuery({ queryKey: ['me'], queryFn: getCurrentUser })
+
+  const uploadAvatarMutation = useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: () => {
+      toast.success('Profile picture updated')
+      setAvatarFile(null)
+      void queryClient.invalidateQueries({ queryKey: ['me'] })
+    },
+    onError: (err) => toast.error(errorMessage(err, 'Could not upload profile picture')),
+  })
+
+  const deleteAvatarMutation = useMutation({
+    mutationFn: deleteAvatar,
+    onSuccess: () => {
+      toast.success('Profile picture removed')
+      void queryClient.invalidateQueries({ queryKey: ['me'] })
+    },
+    onError: (err) => toast.error(errorMessage(err, 'Could not remove profile picture')),
+  })
+
+  function onAvatarFileChange(file: File | null) {
+    if (file && !AVATAR_ALLOWED_TYPES.includes(file.type)) {
+      toast.error('Please choose a JPEG, PNG, or WebP image')
+      return
+    }
+    if (file && file.size > AVATAR_MAX_BYTES) {
+      toast.error('Image must be smaller than 2MB')
+      return
+    }
+    setAvatarFile(file)
+  }
 
   const enableForm = useForm<CodeForm>({ resolver: zodResolver(codeSchema) })
   const disableForm = useForm<CodeForm>({ resolver: zodResolver(codeSchema) })
@@ -68,6 +105,45 @@ export function SettingsPage() {
         <h1 className="text-2xl font-bold text-navy">Settings</h1>
         <p className="text-sm text-navy/60">Manage your account security.</p>
       </div>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle>Profile picture</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex items-center gap-4">
+            <AvatarInitials name={user.name} src={resolveAvatarUrl(user.avatarUrl)} className="h-20 w-20" />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="avatar-file">Upload a new photo</Label>
+              <Input
+                id="avatar-file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => onAvatarFileChange(e.target.files?.[0] ?? null)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => uploadAvatarMutation.mutate(avatarFile!)}
+              disabled={!avatarFile || uploadAvatarMutation.isPending}
+              className="self-start"
+            >
+              {uploadAvatarMutation.isPending ? 'Uploading...' : 'Upload'}
+            </Button>
+            {user.avatarUrl && (
+              <Button
+                variant="outline"
+                onClick={() => deleteAvatarMutation.mutate()}
+                disabled={deleteAvatarMutation.isPending}
+                className="self-start"
+              >
+                {deleteAvatarMutation.isPending ? 'Removing...' : 'Remove'}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="max-w-lg">
         <CardHeader>

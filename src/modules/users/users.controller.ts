@@ -1,5 +1,22 @@
-import { Body, Controller, Delete, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { randomUUID } from 'crypto';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UnsupportedMediaTypeException,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { diskStorage } from 'multer';
 import { UsersService } from './users.service';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
@@ -11,6 +28,12 @@ import { Audit } from '../../common/decorators/audit.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
+
+const EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -27,6 +50,36 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser() ctx: AuthContext, @Body() dto: UpdateMeDto) {
     return this.usersService.updateMe(ctx, dto);
+  }
+
+  @Post('me/avatar')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: 'uploads/avatars',
+        filename: (_req, file, cb) => cb(null, `${randomUUID()}${EXT_BY_MIME[file.mimetype]}`),
+      }),
+      limits: { fileSize: 2_000_000 },
+      fileFilter: (_req, file, cb) => {
+        if (EXT_BY_MIME[file.mimetype]) {
+          cb(null, true);
+          return;
+        }
+        cb(new UnsupportedMediaTypeException('Only JPEG, PNG, or WebP images are allowed'), false);
+      },
+    }),
+  )
+  uploadAvatar(@CurrentUser() ctx: AuthContext, @UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    return this.usersService.uploadAvatar(ctx, file.filename);
+  }
+
+  @Delete('me/avatar')
+  deleteAvatar(@CurrentUser() ctx: AuthContext) {
+    return this.usersService.deleteAvatar(ctx);
   }
 
   @Get()

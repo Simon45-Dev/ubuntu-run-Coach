@@ -2,6 +2,10 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
 
+// The origin uploaded assets (e.g. avatars) are served from - static files live
+// outside the /api/v1 prefix, so this strips it back off the API base URL.
+export const assetBaseUrl = baseURL.replace(/\/api\/v1\/?$/, '')
+
 // Access token lives only in memory - never localStorage/sessionStorage. The
 // refresh token is an httpOnly cookie the frontend never reads directly.
 let accessToken: string | null = null
