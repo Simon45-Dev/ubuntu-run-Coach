@@ -180,6 +180,22 @@ export interface CoachNote {
   updatedAt: string
 }
 
+export interface WeeklyTrendEntry {
+  weekStart: string
+  scheduled: number
+  completed: number
+  distanceKm: number
+  durationSec: number
+}
+
+export interface AnalyticsSummary {
+  from: string
+  to: string
+  adherence: { scheduled: number; completed: number; rate: number | null }
+  volume: { totalDistanceKm: number; totalDurationSec: number }
+  weeklyTrend: WeeklyTrendEntry[]
+}
+
 export interface Workout {
   id: string
   trainingPlanId: string

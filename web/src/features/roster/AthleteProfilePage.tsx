@@ -23,6 +23,7 @@ import { PlansTab } from '@/features/plans/PlansTab'
 import { CheckInsTab } from '@/features/check-ins/CheckInsTab'
 import { RaceGoalsTab } from '@/features/race-goals/RaceGoalsTab'
 import { CoachNotesTab } from '@/features/coach-notes/CoachNotesTab'
+import { AnalyticsTab } from '@/features/analytics/AnalyticsTab'
 import { InviteLinkDialog } from './InviteLinkDialog'
 
 export function AthleteProfilePage() {
@@ -124,6 +125,7 @@ export function AthleteProfilePage() {
           <TabsTrigger value="plans">Training Plans</TabsTrigger>
           <TabsTrigger value="check-ins">Check-ins</TabsTrigger>
           <TabsTrigger value="race-goals">Race Goals</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           {canManage && <TabsTrigger value="notes">Notes</TabsTrigger>}
         </TabsList>
 
@@ -187,6 +189,10 @@ export function AthleteProfilePage() {
 
         <TabsContent value="race-goals">
           <RaceGoalsTab athleteId={athlete.id} />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsTab athleteId={athlete.id} />
         </TabsContent>
 
         {canManage && (
