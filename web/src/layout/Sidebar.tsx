@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { ClipboardList, LogOut, MessageCircle, Siren, Users, UsersRound } from 'lucide-react'
+import { Bell, ClipboardList, LogOut, MessageCircle, Siren, Users, UsersRound } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import logo from '@/assets/logo.png'
 import { cn } from '@/lib/utils'
@@ -52,6 +52,12 @@ export function Sidebar() {
           <NavLink to="/messages" className={linkClass}>
             <MessageCircle className="h-4 w-4" />
             Messages
+          </NavLink>
+        )}
+        {(isCoach || ctx?.role === 'ATHLETE') && (
+          <NavLink to="/notifications" className={linkClass}>
+            <Bell className="h-4 w-4" />
+            Notifications
           </NavLink>
         )}
       </nav>

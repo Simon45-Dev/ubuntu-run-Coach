@@ -180,6 +180,25 @@ export interface CoachNote {
   updatedAt: string
 }
 
+export const NOTIFICATION_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'] as const
+export type NotificationPriority = (typeof NOTIFICATION_PRIORITIES)[number]
+
+export const NOTIFICATION_STATUSES = ['PENDING', 'SENT', 'READ', 'FAILED'] as const
+export type NotificationStatus = (typeof NOTIFICATION_STATUSES)[number]
+
+export interface Notification {
+  id: string
+  recipientId: string
+  type: string
+  priority: NotificationPriority
+  status: NotificationStatus
+  payload: Record<string, unknown> | null
+  sentAt: string | null
+  readAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface WeeklyTrendEntry {
   weekStart: string
   scheduled: number

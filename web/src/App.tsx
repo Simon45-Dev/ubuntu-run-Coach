@@ -8,6 +8,7 @@ import { RosterListPage } from '@/features/roster/RosterListPage'
 import { AthleteProfilePage } from '@/features/roster/AthleteProfilePage'
 import { PlanDetailPage } from '@/features/plans/PlanDetailPage'
 import { MessagesPage } from '@/features/messages/MessagesPage'
+import { NotificationsPage } from '@/features/notifications/NotificationsPage'
 import { ActionCentrePage } from '@/features/action-centre/ActionCentrePage'
 import { GroupsListPage } from '@/features/groups/GroupsListPage'
 import { GroupDetailPage } from '@/features/groups/GroupDetailPage'
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />
           <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
