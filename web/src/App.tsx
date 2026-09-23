@@ -7,10 +7,11 @@ import { RosterListPage } from '@/features/roster/RosterListPage'
 import { AthleteProfilePage } from '@/features/roster/AthleteProfilePage'
 import { PlanDetailPage } from '@/features/plans/PlanDetailPage'
 import { MessagesPage } from '@/features/messages/MessagesPage'
+import { ActionCentrePage } from '@/features/action-centre/ActionCentrePage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
-  if (ctx?.role === 'COACH') return <Navigate to="/roster" replace />
+  if (ctx?.role === 'COACH') return <Navigate to="/action-centre" replace />
   if (ctx?.role === 'ATHLETE' && ctx.athleteId) {
     return <Navigate to={`/athletes/${ctx.athleteId}`} replace />
   }
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/" element={<RootRedirect />} />
           <Route path="/admin" element={<AdminPlaceholderPage />} />
           <Route element={<ProtectedRoute allow={['COACH', 'PLATFORM_ADMIN']} />}>
+            <Route path="/action-centre" element={<ActionCentrePage />} />
             <Route path="/roster" element={<RosterListPage />} />
           </Route>
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />

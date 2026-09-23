@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LogOut, MessageCircle, Users } from 'lucide-react'
+import { LogOut, MessageCircle, Siren, Users } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import logo from '@/assets/logo.png'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,12 @@ export function Sidebar() {
     <aside className="flex h-screen w-60 flex-col bg-navy px-3 py-4">
       <img src={logo} alt="Ubuntu Run" className="mb-6 h-auto w-full px-2" />
       <nav className="flex flex-1 flex-col gap-1">
+        {isCoach && (
+          <NavLink to="/action-centre" className={linkClass}>
+            <Siren className="h-4 w-4" />
+            Action Centre
+          </NavLink>
+        )}
         {isCoach && (
           <NavLink to="/roster" className={linkClass}>
             <Users className="h-4 w-4" />

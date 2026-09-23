@@ -133,3 +133,26 @@ export interface Paginated<T> {
   page: number
   pageSize: number
 }
+
+export const ALERT_TYPES = [
+  'PAIN_INJURY',
+  'MISSED_TRAINING',
+  'LOW_READINESS',
+  'TRAINING_SPIKE',
+  'RACE_APPROACHING',
+  'POSITIVE_PROGRESS',
+] as const
+export type AlertType = (typeof ALERT_TYPES)[number]
+
+export const ALERT_PRIORITIES = ['HIGH', 'MEDIUM', 'LOW'] as const
+export type AlertPriority = (typeof ALERT_PRIORITIES)[number]
+
+export interface ActionCentreAlert {
+  athleteId: string
+  athleteName: string
+  type: AlertType
+  priority: AlertPriority
+  message: string
+  detectedAt: string
+  payload?: Record<string, unknown>
+}
