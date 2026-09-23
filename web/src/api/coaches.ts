@@ -37,6 +37,10 @@ export async function resendCoachInvite(coachId: string): Promise<ResendInviteRe
   return res.data
 }
 
+export async function deleteCoach(id: string): Promise<void> {
+  await apiClient.delete(`/coaches/${id}`)
+}
+
 export interface UpdateCoachInput {
   bio?: string
   experienceYears?: number

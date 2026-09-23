@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { Pencil, Plus } from 'lucide-react'
 import { getOrganisation } from '@/api/organisations'
-import { listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
+import { deleteCoach, listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
 import { listRoster } from '@/api/athletes'
 import type { Coach } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
@@ -14,6 +14,14 @@ import { Badge } from '@/components/ui/badge'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { InviteCoachDialog } from './InviteCoachDialog'
 import { EditOrganisationDialog } from './EditOrganisationDialog'
 
@@ -48,10 +56,12 @@ async function loadAthleteCounts(coaches: Coach[]): Promise<Record<string, numbe
 export function OrganisationDetailPage({ organisationId: organisationIdProp }: { organisationId?: string } = {}) {
   const params = useParams<{ organisationId: string }>()
   const organisationId = organisationIdProp ?? params.organisationId
+  const queryClient = useQueryClient()
   const { ctx } = useAuth()
   const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
   const [inviteOpen, setInviteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [removeId, setRemoveId] = useState<string | null>(null)
 
   const { data: organisation, isLoading: orgLoading } = useQuery({
     queryKey: ['organisation', organisationId],
@@ -77,6 +87,22 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
         err instanceof AxiosError
           ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not resend invite')
           : 'Could not resend invite'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (coachId: string) => deleteCoach(coachId),
+    onSuccess: () => {
+      toast.success('Coach removed')
+      setRemoveId(null)
+      void queryClient.invalidateQueries({ queryKey: ['coaches', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not remove coach')
+          : 'Could not remove coach'
       toast.error(Array.isArray(message) ? message.join(', ') : message)
     },
   })
@@ -137,16 +163,23 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
                 </TableCell>
                 <TableCell className="text-navy/60">{athleteCounts?.[coach.id] ?? '-'}</TableCell>
                 <TableCell>
-                  {coach.user.status === 'INVITED' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => resendMutation.mutate(coach.id)}
-                      disabled={resendMutation.isPending}
-                    >
-                      Resend invite
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                    {coach.user.status === 'INVITED' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => resendMutation.mutate(coach.id)}
+                        disabled={resendMutation.isPending}
+                      >
+                        Resend invite
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <Button variant="outline" size="sm" onClick={() => setRemoveId(coach.id)}>
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -160,6 +193,30 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
       {isAdmin && (
         <EditOrganisationDialog organisation={organisation} open={editOpen} onOpenChange={setEditOpen} />
       )}
+
+      <Dialog open={!!removeId} onOpenChange={(open) => !open && setRemoveId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove this coach?</DialogTitle>
+            <DialogDescription>
+              This removes them from the organisation. Their athletes and training history are kept, not
+              deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => removeId && removeMutation.mutate(removeId)}
+              disabled={removeMutation.isPending}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -69,4 +69,31 @@ describe('Coaches (e2e)', () => {
       expect.arrayContaining([coach.coachId, res.body.id]),
     );
   });
+
+  it('PLATFORM_ADMIN can remove a coach', async () => {
+    const coach = await registerCoach(app);
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/coaches/${coach.coachId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${coach.organisationId}/coaches`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(listRes.body.map((c: { id: string }) => c.id)).not.toContain(coach.coachId);
+  });
+
+  it('a non-admin cannot remove a coach', async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/coaches/${coachB.coachId}`)
+      .set('Authorization', `Bearer ${coachA.accessToken}`)
+      .expect(403);
+  });
 });
