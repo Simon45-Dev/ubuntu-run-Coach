@@ -3,9 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { differenceInCalendarDays } from 'date-fns'
 import { deleteAthlete, getAthlete, resendInvite, updateAthlete } from '@/api/athletes'
+import { getCheckIns, listConsents } from '@/api/checkIns'
+import { listRaceGoals } from '@/api/raceGoals'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Input, Textarea } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { OverviewTab } from './OverviewTab'
 import { PlansTab } from '@/features/plans/PlansTab'
 import { CheckInsTab } from '@/features/check-ins/CheckInsTab'
 import { RaceGoalsTab } from '@/features/race-goals/RaceGoalsTab'
@@ -32,6 +37,7 @@ export function AthleteProfilePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
   const canManage = ctx?.role === 'COACH' || ctx?.role === 'PLATFORM_ADMIN'
   const isSelf = ctx?.role === 'ATHLETE' && ctx.athleteId === athleteId
 
@@ -39,6 +45,23 @@ export function AthleteProfilePage() {
     queryKey: ['athlete', athleteId],
     queryFn: () => getAthlete(athleteId!),
     enabled: !!athleteId,
+  })
+
+  const { data: raceGoals } = useQuery({
+    queryKey: ['race-goals', athleteId],
+    queryFn: () => listRaceGoals(athleteId!),
+    enabled: !!athleteId,
+  })
+  const { data: consents } = useQuery({
+    queryKey: ['consents', athleteId],
+    queryFn: () => listConsents(athleteId!),
+    enabled: !!athleteId,
+  })
+  const liveConsent = consents?.items.find((c) => c.consentType === 'HEALTH_CHECKIN_DATA' && !c.withdrawnAt)
+  const { data: latestCheckIn } = useQuery({
+    queryKey: ['check-ins', athleteId, 'latest'],
+    queryFn: () => getCheckIns(athleteId!, 1, 1),
+    enabled: !!athleteId && !!liveConsent,
   })
 
   const [goal, setGoal] = useState('')
@@ -94,15 +117,34 @@ export function AthleteProfilePage() {
     setEditing(true)
   }
 
+  const now = new Date()
+  const nextGoal = raceGoals
+    ?.filter((g) => g.status === 'PLANNED' && new Date(g.raceDate) >= now)
+    .sort((a, b) => new Date(a.raceDate).getTime() - new Date(b.raceDate).getTime())[0]
+  const todaysCheckIn = latestCheckIn?.items[0]
+  const isPainToday =
+    todaysCheckIn?.pain && new Date(todaysCheckIn.date).toDateString() === now.toDateString()
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">{athlete.user.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-navy">{athlete.user.name}</h1>
+            {isPainToday && <Badge variant="attention">{todaysCheckIn!.pain} · today</Badge>}
+            {nextGoal && (
+              <Badge variant="neutral">
+                {nextGoal.raceName} · {differenceInCalendarDays(new Date(nextGoal.raceDate), now)} days
+              </Badge>
+            )}
+          </div>
           <p className="text-sm text-navy/60">{athlete.user.email}</p>
         </div>
         {canManage && (
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setActiveTab('plans')}>
+              Adjust plan
+            </Button>
             {athlete.user.status === 'INVITED' && (
               <Button
                 variant="outline"
@@ -119,8 +161,9 @@ export function AthleteProfilePage() {
         )}
       </div>
 
-      <Tabs defaultValue="profile">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="plans">Training Plans</TabsTrigger>
           <TabsTrigger value="check-ins">Check-ins</TabsTrigger>
@@ -128,6 +171,10 @@ export function AthleteProfilePage() {
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           {canManage && <TabsTrigger value="notes">Notes</TabsTrigger>}
         </TabsList>
+
+        <TabsContent value="overview">
+          <OverviewTab athleteId={athlete.id} canManage={canManage} />
+        </TabsContent>
 
         <TabsContent value="profile">
           <Card>

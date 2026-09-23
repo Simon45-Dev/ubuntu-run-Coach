@@ -44,11 +44,13 @@ export function aggregateAnalytics(summaries: AnalyticsSummary[]): {
         completed: 0,
         distanceKm: 0,
         durationSec: 0,
+        plannedDistanceKm: 0,
       }
       bucket.scheduled += week.scheduled
       bucket.completed += week.completed
       bucket.distanceKm += week.distanceKm
       bucket.durationSec += week.durationSec
+      bucket.plannedDistanceKm += week.plannedDistanceKm
       buckets.set(week.weekStart, bucket)
     }
   }

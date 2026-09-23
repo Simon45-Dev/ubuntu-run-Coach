@@ -82,6 +82,7 @@ function summary(overrides: Partial<AnalyticsSummary>): AnalyticsSummary {
     adherence: { scheduled: 0, completed: 0, rate: null },
     volume: { totalDistanceKm: 0, totalDurationSec: 0 },
     weeklyTrend: [],
+    avgRpeDelta: null,
     ...overrides,
   }
 }
@@ -96,14 +97,28 @@ describe('aggregateAnalytics', () => {
       adherence: { scheduled: 4, completed: 2, rate: 0.5 },
       volume: { totalDistanceKm: 20, totalDurationSec: 3600 },
       weeklyTrend: [
-        { weekStart: '2026-01-05T00:00:00.000Z', scheduled: 2, completed: 1, distanceKm: 10, durationSec: 1800 },
+        {
+          weekStart: '2026-01-05T00:00:00.000Z',
+          scheduled: 2,
+          completed: 1,
+          distanceKm: 10,
+          durationSec: 1800,
+          plannedDistanceKm: 12,
+        },
       ],
     })
     const b = summary({
       adherence: { scheduled: 6, completed: 6, rate: 1 },
       volume: { totalDistanceKm: 30, totalDurationSec: 5400 },
       weeklyTrend: [
-        { weekStart: '2026-01-05T00:00:00.000Z', scheduled: 3, completed: 3, distanceKm: 15, durationSec: 2700 },
+        {
+          weekStart: '2026-01-05T00:00:00.000Z',
+          scheduled: 3,
+          completed: 3,
+          distanceKm: 15,
+          durationSec: 2700,
+          plannedDistanceKm: 15,
+        },
       ],
     })
 
@@ -112,7 +127,14 @@ describe('aggregateAnalytics', () => {
     expect(result.completionRate).toBe(0.8) // (2 + 6) / (4 + 6)
     expect(result.avgWeeklyDistanceKm).toBe(50) // (20 + 30) total across 1 combined week bucket
     expect(result.weeklyTrend).toEqual([
-      { weekStart: '2026-01-05T00:00:00.000Z', scheduled: 5, completed: 4, distanceKm: 25, durationSec: 4500 },
+      {
+        weekStart: '2026-01-05T00:00:00.000Z',
+        scheduled: 5,
+        completed: 4,
+        distanceKm: 25,
+        durationSec: 4500,
+        plannedDistanceKm: 27,
+      },
     ])
   })
 })

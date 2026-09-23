@@ -17,6 +17,9 @@ export type OrganisationType = (typeof ORGANISATION_TYPES)[number]
 export const RACE_GOAL_STATUSES = ['PLANNED', 'COMPLETED', 'DNF', 'CANCELLED'] as const
 export type RaceGoalStatus = (typeof RACE_GOAL_STATUSES)[number]
 
+export const PB_SOURCES = ['SELF_REPORTED', 'VERIFIED'] as const
+export type PbSource = (typeof PB_SOURCES)[number]
+
 export const TRAINING_PLAN_PHASES = ['BASE', 'BUILD', 'PEAK', 'TAPER', 'RECOVERY'] as const
 export type TrainingPlanPhase = (typeof TRAINING_PLAN_PHASES)[number]
 
@@ -182,6 +185,17 @@ export interface RaceGoal {
   updatedAt: string
 }
 
+export interface PersonalBest {
+  id: string
+  athleteId: string
+  distance: string
+  timeSeconds: number
+  achievedDate: string | null
+  source: PbSource
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CoachNote {
   id: string
   athleteId: string
@@ -216,6 +230,7 @@ export interface WeeklyTrendEntry {
   completed: number
   distanceKm: number
   durationSec: number
+  plannedDistanceKm: number
 }
 
 export interface AnalyticsSummary {
@@ -224,6 +239,7 @@ export interface AnalyticsSummary {
   adherence: { scheduled: number; completed: number; rate: number | null }
   volume: { totalDistanceKm: number; totalDurationSec: number }
   weeklyTrend: WeeklyTrendEntry[]
+  avgRpeDelta: number | null
 }
 
 export interface Workout {
