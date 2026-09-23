@@ -60,11 +60,7 @@ describe('Athletes (e2e)', () => {
     const secondCoachRes = await request(app.getHttpServer())
       .post(`/api/v1/organisations/${coach.organisationId}/coaches`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({
-        email: 'reassign-target@example.test',
-        password: 'TestPassword123!',
-        name: 'Second Coach',
-      })
+      .send({ email: 'reassign-target@example.test', name: 'Second Coach' })
       .expect(201);
 
     const secondCoachId = secondCoachRes.body.id as string;

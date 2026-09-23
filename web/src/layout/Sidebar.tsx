@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   Bell,
+  Building2,
   ClipboardList,
   House,
   LayoutDashboard,
@@ -17,6 +18,7 @@ export function Sidebar() {
   const { ctx } = useAuth()
   const isCoach = ctx?.role === 'COACH'
   const isAthlete = ctx?.role === 'ATHLETE'
+  const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -28,6 +30,12 @@ export function Sidebar() {
     <aside className="flex h-screen w-60 flex-col bg-forest px-3 py-4">
       <img src={logo} alt="Ubuntu Run" className="mb-6 h-auto w-full px-2" />
       <nav className="flex flex-1 flex-col gap-1">
+        {isAdmin && (
+          <NavLink to="/admin" className={linkClass}>
+            <Building2 className="h-4 w-4" />
+            Organisations
+          </NavLink>
+        )}
         {isCoach && (
           <NavLink to="/dashboard" className={linkClass}>
             <LayoutDashboard className="h-4 w-4" />

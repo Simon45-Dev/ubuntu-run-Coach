@@ -1,10 +1,12 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
-import { CreateCoachDto } from './dto/create-coach.dto';
+import { generateInviteToken } from '../../common/invite-token';
+import { InviteCoachDto } from './dto/invite-coach.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
 
 const COACH_INCLUDE = { user: { select: { id: true, email: true, name: true, status: true } } };
@@ -14,11 +16,14 @@ export class CoachesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * PLATFORM_ADMIN only in this slice. The API accepts any organisationId so
-   * a second coach can be added to an existing organisation, even though no
-   * v1 UI exposes that yet (see the multi-coach scope decision).
+   * PLATFORM_ADMIN only. Mirrors AthletesService.invite: no password is
+   * chosen here - the account starts INVITED with a placeholder password
+   * and a one-time token, returned directly to the admin to share (there's
+   * no transactional email service in this codebase yet) since the same
+   * POST /auth/accept-invite endpoint activates any invited user regardless
+   * of role.
    */
-  async create(organisationId: string, dto: CreateCoachDto) {
+  async invite(organisationId: string, dto: InviteCoachDto) {
     const org = await this.prisma.organisation.findFirst({
       where: { id: organisationId, deletedAt: null },
     });
@@ -31,15 +36,19 @@ export class CoachesService {
       throw new ForbiddenException('An account with this email already exists');
     }
 
-    const passwordHash = await argon2.hash(dto.password);
-    return this.prisma.$transaction(async (tx) => {
+    const { rawToken, tokenHash, expiresAt } = generateInviteToken();
+    const placeholderPasswordHash = await argon2.hash(randomBytes(32).toString('hex'));
+
+    const coach = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email: dto.email,
-          passwordHash,
+          passwordHash: placeholderPasswordHash,
           name: dto.name,
           role: Role.COACH,
-          status: UserStatus.ACTIVE,
+          status: UserStatus.INVITED,
+          inviteTokenHash: tokenHash,
+          inviteTokenExpiresAt: expiresAt,
         },
       });
       return tx.coach.create({
@@ -52,6 +61,30 @@ export class CoachesService {
         include: COACH_INCLUDE,
       });
     });
+
+    return { ...coach, inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
+  }
+
+  /** Regenerates the invite token for a coach who hasn't accepted yet. PLATFORM_ADMIN only. */
+  async resendInvite(id: string) {
+    const coach = await this.prisma.coach.findFirst({
+      where: { id, deletedAt: null },
+      include: COACH_INCLUDE,
+    });
+    if (!coach) {
+      throw new NotFoundException('Coach not found');
+    }
+    if (coach.user.status !== UserStatus.INVITED) {
+      throw new BadRequestException('This coach has already accepted their invite');
+    }
+
+    const { rawToken, tokenHash, expiresAt } = generateInviteToken();
+    await this.prisma.user.update({
+      where: { id: coach.userId },
+      data: { inviteTokenHash: tokenHash, inviteTokenExpiresAt: expiresAt },
+    });
+
+    return { inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
   }
 
   async findAllForOrganisation(ctx: AuthContext, organisationId: string) {

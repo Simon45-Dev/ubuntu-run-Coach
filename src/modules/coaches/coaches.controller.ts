@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CoachesService } from './coaches.service';
-import { CreateCoachDto } from './dto/create-coach.dto';
+import { InviteCoachDto } from './dto/invite-coach.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -23,8 +23,14 @@ export class CoachesController {
   @Post('organisations/:organisationId/coaches')
   @Roles(Role.PLATFORM_ADMIN)
   @ScopeResource('organisation', 'organisationId')
-  create(@Param('organisationId') organisationId: string, @Body() dto: CreateCoachDto) {
-    return this.coachesService.create(organisationId, dto);
+  invite(@Param('organisationId') organisationId: string, @Body() dto: InviteCoachDto) {
+    return this.coachesService.invite(organisationId, dto);
+  }
+
+  @Post('coaches/:id/resend-invite')
+  @Roles(Role.PLATFORM_ADMIN)
+  resendInvite(@Param('id') id: string) {
+    return this.coachesService.resendInvite(id);
   }
 
   @Get('organisations/:organisationId/coaches')

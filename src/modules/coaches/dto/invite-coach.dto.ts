@@ -2,19 +2,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 /**
- * Creates a User(role=COACH) + Coach in an existing organisation. Used for
- * PLATFORM_ADMIN-driven coach creation now, and by the (future) org-owner
- * "invite a second coach" flow the multi-coach schema shape already supports.
+ * Invites a coach into an existing organisation - PLATFORM_ADMIN only. No
+ * password is set here: the account starts INVITED with a placeholder
+ * password and a one-time token the coach uses to activate their own
+ * account via POST /auth/accept-invite, mirroring InviteAthleteDto exactly.
  */
-export class CreateCoachDto {
+export class InviteCoachDto {
   @ApiProperty()
   @IsEmail()
   email: string;
-
-  @ApiProperty({ minLength: 10 })
-  @IsString()
-  @MinLength(10)
-  password: string;
 
   @ApiProperty()
   @IsString()

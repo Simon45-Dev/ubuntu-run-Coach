@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { OrganisationsService } from './organisations.service';
+import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -18,6 +19,12 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 @Controller('organisations')
 export class OrganisationsController {
   constructor(private readonly organisationsService: OrganisationsService) {}
+
+  @Post()
+  @Roles(Role.PLATFORM_ADMIN)
+  create(@Body() dto: CreateOrganisationDto) {
+    return this.organisationsService.create(dto);
+  }
 
   @Get()
   @Roles(Role.PLATFORM_ADMIN)

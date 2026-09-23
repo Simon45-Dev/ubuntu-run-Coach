@@ -48,7 +48,7 @@ describe('Coaches (e2e)', () => {
       .expect(403);
   });
 
-  it('PLATFORM_ADMIN can add a second coach to an existing organisation', async () => {
+  it('PLATFORM_ADMIN can invite a second coach into an existing organisation', async () => {
     const coach = await registerCoach(app);
     const admin = await createPlatformAdmin(prisma);
     const adminToken = await loginAs(app, admin.email, admin.password);
@@ -56,12 +56,10 @@ describe('Coaches (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post(`/api/v1/organisations/${coach.organisationId}/coaches`)
       .set('Authorization', `Bearer ${adminToken}`)
-      .send({
-        email: 'second-coach@example.test',
-        password: 'TestPassword123!',
-        name: 'Second Coach',
-      })
+      .send({ email: 'second-coach@example.test', name: 'Second Coach' })
       .expect(201);
+    expect(typeof res.body.inviteToken).toBe('string');
+    expect(res.body.inviteToken.length).toBeGreaterThan(20);
 
     const listRes = await request(app.getHttpServer())
       .get(`/api/v1/organisations/${coach.organisationId}/coaches`)
@@ -72,12 +70,12 @@ describe('Coaches (e2e)', () => {
     );
   });
 
-  it('a non-admin cannot create a coach', async () => {
+  it('a non-admin cannot invite a coach', async () => {
     const coach = await registerCoach(app);
     await request(app.getHttpServer())
       .post(`/api/v1/organisations/${coach.organisationId}/coaches`)
       .set('Authorization', `Bearer ${coach.accessToken}`)
-      .send({ email: 'x@example.test', password: 'TestPassword123!', name: 'X' })
+      .send({ email: 'x@example.test', name: 'X' })
       .expect(403);
   });
 });

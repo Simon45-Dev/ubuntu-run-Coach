@@ -3,11 +3,23 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
 
 @Injectable()
 export class OrganisationsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * PLATFORM_ADMIN only (route already restricted by @Roles). No
+   * Subscription row is created here - matching AuthService.register's
+   * existing behaviour, not prisma/seed.ts's extra step. Nothing in the app
+   * reads or enforces Subscription yet, so creating one here would be
+   * speculative.
+   */
+  async create(dto: CreateOrganisationDto) {
+    return this.prisma.organisation.create({ data: { name: dto.name, type: dto.type } });
+  }
 
   // Note: buildOrgScopeFilter (src/common/scope/scope-filters.ts) scopes
   // models that carry an organisationId FK (Coach, Subscription). The

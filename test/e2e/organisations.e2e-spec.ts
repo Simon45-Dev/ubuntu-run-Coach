@@ -46,6 +46,34 @@ describe('Organisations (e2e)', () => {
       .expect(400);
   });
 
+  it('PLATFORM_ADMIN can create a new organisation', async () => {
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/organisations')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'New Running Club' })
+      .expect(201);
+    expect(res.body.name).toBe('New Running Club');
+    expect(res.body.type).toBe('SOLO');
+
+    const getRes = await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${res.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(getRes.body.id).toBe(res.body.id);
+  });
+
+  it('a non-admin cannot create an organisation', async () => {
+    const coach = await registerCoach(app);
+    await request(app.getHttpServer())
+      .post('/api/v1/organisations')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ name: 'Should Not Work' })
+      .expect(403);
+  });
+
   it('only PLATFORM_ADMIN can list all organisations', async () => {
     const coach = await registerCoach(app);
     await request(app.getHttpServer())

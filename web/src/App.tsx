@@ -16,6 +16,8 @@ import { TemplatesListPage } from '@/features/templates/TemplatesListPage'
 import { TemplateDetailPage } from '@/features/templates/TemplateDetailPage'
 import { CoachDashboardPage } from '@/features/dashboard/CoachDashboardPage'
 import { AthleteHomePage } from '@/features/dashboard/AthleteHomePage'
+import { OrganisationsListPage } from '@/features/admin/OrganisationsListPage'
+import { OrganisationDetailPage } from '@/features/admin/OrganisationDetailPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -26,18 +28,6 @@ function RootRedirect() {
   return <Navigate to="/admin" replace />
 }
 
-function AdminPlaceholderPage() {
-  return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-bold text-navy">Admin console</h1>
-      <p className="text-sm text-navy/60">
-        The platform admin console isn't part of this dashboard slice yet - it covers the coach and athlete
-        experience for now.
-      </p>
-    </div>
-  )
-}
-
 export default function App() {
   return (
     <Routes>
@@ -46,7 +36,10 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<RootRedirect />} />
-          <Route path="/admin" element={<AdminPlaceholderPage />} />
+          <Route element={<ProtectedRoute allow={['PLATFORM_ADMIN']} />}>
+            <Route path="/admin" element={<OrganisationsListPage />} />
+            <Route path="/admin/organisations/:organisationId" element={<OrganisationDetailPage />} />
+          </Route>
           <Route element={<ProtectedRoute allow={['COACH', 'PLATFORM_ADMIN']} />}>
             <Route path="/dashboard" element={<CoachDashboardPage />} />
             <Route path="/action-centre" element={<ActionCentrePage />} />

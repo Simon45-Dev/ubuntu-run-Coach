@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createHash, randomBytes } from 'crypto';
+import { randomBytes } from 'crypto';
 import * as argon2 from 'argon2';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -12,19 +12,9 @@ import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { buildAthleteScopeFilter } from '../../common/scope/scope-filters';
+import { generateInviteToken } from '../../common/invite-token';
 import { InviteAthleteDto } from './dto/invite-athlete.dto';
 import { UpdateAthleteDto } from './dto/update-athlete.dto';
-
-const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-function generateInviteToken(): { rawToken: string; tokenHash: string; expiresAt: Date } {
-  const rawToken = randomBytes(48).toString('hex');
-  return {
-    rawToken,
-    tokenHash: createHash('sha256').update(rawToken).digest('hex'),
-    expiresAt: new Date(Date.now() + INVITE_TTL_MS),
-  };
-}
 
 // `coach` is included (not just coachId) so an athlete's own profile response
 // can surface who their coach is - e.g. for the web dashboard's messaging UI,
