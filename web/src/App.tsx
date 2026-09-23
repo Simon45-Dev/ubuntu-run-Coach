@@ -9,6 +9,8 @@ import { AthleteProfilePage } from '@/features/roster/AthleteProfilePage'
 import { PlanDetailPage } from '@/features/plans/PlanDetailPage'
 import { MessagesPage } from '@/features/messages/MessagesPage'
 import { ActionCentrePage } from '@/features/action-centre/ActionCentrePage'
+import { GroupsListPage } from '@/features/groups/GroupsListPage'
+import { GroupDetailPage } from '@/features/groups/GroupDetailPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -43,6 +45,9 @@ export default function App() {
           <Route element={<ProtectedRoute allow={['COACH', 'PLATFORM_ADMIN']} />}>
             <Route path="/action-centre" element={<ActionCentrePage />} />
             <Route path="/roster" element={<RosterListPage />} />
+            <Route path="/groups" element={<GroupsListPage />} />
+            <Route path="/groups/:groupId" element={<GroupDetailPage />} />
+            <Route path="/groups/:groupId/plans/:planId" element={<PlanDetailPage />} />
           </Route>
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />

@@ -6,6 +6,11 @@ export async function listPlansForAthlete(athleteId: string): Promise<TrainingPl
   return res.data
 }
 
+export async function listPlansForGroup(groupId: string): Promise<TrainingPlan[]> {
+  const res = await apiClient.get<TrainingPlan[]>(`/groups/${groupId}/training-plans`)
+  return res.data
+}
+
 export async function getPlan(id: string): Promise<TrainingPlan> {
   const res = await apiClient.get<TrainingPlan>(`/training-plans/${id}`)
   return res.data
@@ -24,6 +29,14 @@ export async function createPlan(
   input: CreateTrainingPlanInput,
 ): Promise<TrainingPlan> {
   const res = await apiClient.post<TrainingPlan>(`/athletes/${athleteId}/training-plans`, input)
+  return res.data
+}
+
+export async function createPlanForGroup(
+  groupId: string,
+  input: CreateTrainingPlanInput,
+): Promise<TrainingPlan> {
+  const res = await apiClient.post<TrainingPlan>(`/groups/${groupId}/training-plans`, input)
   return res.data
 }
 

@@ -35,7 +35,12 @@ const statusVariant = {
 } as const
 
 export function PlanDetailPage() {
-  const { athleteId, planId } = useParams<{ athleteId: string; planId: string }>()
+  const { athleteId, groupId, planId } = useParams<{
+    athleteId?: string
+    groupId?: string
+    planId: string
+  }>()
+  const parentPath = athleteId ? `/athletes/${athleteId}` : `/groups/${groupId}`
   const { ctx } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -71,7 +76,7 @@ export function PlanDetailPage() {
     mutationFn: () => deletePlan(planId!),
     onSuccess: () => {
       toast.success('Plan deleted')
-      navigate(`/athletes/${athleteId}`)
+      navigate(parentPath)
     },
     onError: () => toast.error('Could not delete plan'),
   })

@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { createPlan } from '@/api/trainingPlans'
+import { createPlan, createPlanForGroup } from '@/api/trainingPlans'
 import { TRAINING_PLAN_PHASES } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import type { PlanOwner } from './planOwner'
 
 const schema = z
   .object({
@@ -33,11 +34,11 @@ const schema = z
 type FormValues = z.infer<typeof schema>
 
 export function CreatePlanDialog({
-  athleteId,
+  owner,
   open,
   onOpenChange,
 }: {
-  athleteId: string
+  owner: PlanOwner
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -51,16 +52,18 @@ export function CreatePlanDialog({
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      createPlan(athleteId, {
+    mutationFn: (values: FormValues) => {
+      const input = {
         ...values,
         startDate: new Date(values.startDate).toISOString(),
         endDate: values.endDate ? new Date(values.endDate).toISOString() : undefined,
         goal: values.goal || undefined,
-      }),
+      }
+      return owner.type === 'athlete' ? createPlan(owner.id, input) : createPlanForGroup(owner.id, input)
+    },
     onSuccess: () => {
       toast.success('Training plan created')
-      void queryClient.invalidateQueries({ queryKey: ['training-plans', athleteId] })
+      void queryClient.invalidateQueries({ queryKey: ['training-plans', owner.type, owner.id] })
       reset()
       onOpenChange(false)
     },

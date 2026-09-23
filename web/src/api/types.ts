@@ -69,6 +69,23 @@ export interface Athlete {
   coach: { id: string; user: { id: string; name: string } } | null
 }
 
+export interface GroupMembership {
+  id: string
+  athleteId: string
+  joinedAt: string
+  athlete: { id: string; user: { id: string; name: string } }
+}
+
+export interface Group {
+  id: string
+  coachId: string
+  organisationId: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  memberships: GroupMembership[]
+}
+
 export interface TrainingPlan {
   id: string
   organisationId: string

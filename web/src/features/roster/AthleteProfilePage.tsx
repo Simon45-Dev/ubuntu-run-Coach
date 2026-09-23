@@ -171,7 +171,7 @@ export function AthleteProfilePage() {
         </TabsContent>
 
         <TabsContent value="plans">
-          <PlansTab athleteId={athlete.id} canManage={canManage} />
+          <PlansTab owner={{ type: 'athlete', id: athlete.id }} canManage={canManage} />
         </TabsContent>
       </Tabs>
 

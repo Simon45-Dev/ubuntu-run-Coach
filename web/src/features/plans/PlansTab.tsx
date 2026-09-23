@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { listPlansForAthlete } from '@/api/trainingPlans'
+import { listPlansForAthlete, listPlansForGroup } from '@/api/trainingPlans'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { formatDate } from '@/lib/format'
 import { CreatePlanDialog } from './CreatePlanDialog'
+import type { PlanOwner } from './planOwner'
 
 const statusVariant = {
   DRAFT: 'neutral',
@@ -18,14 +19,16 @@ const statusVariant = {
   ARCHIVED: 'inactive',
 } as const
 
-export function PlansTab({ athleteId, canManage }: { athleteId: string; canManage: boolean }) {
+export function PlansTab({ owner, canManage }: { owner: PlanOwner; canManage: boolean }) {
   const [createOpen, setCreateOpen] = useState(false)
   const { data: plans, isLoading } = useQuery({
-    queryKey: ['training-plans', athleteId],
-    queryFn: () => listPlansForAthlete(athleteId),
+    queryKey: ['training-plans', owner.type, owner.id],
+    queryFn: () => (owner.type === 'athlete' ? listPlansForAthlete(owner.id) : listPlansForGroup(owner.id)),
   })
 
   if (isLoading) return <FullPageSpinner />
+
+  const planLinkPrefix = owner.type === 'athlete' ? `/athletes/${owner.id}` : `/groups/${owner.id}`
 
   return (
     <div className="flex flex-col gap-4">
@@ -48,7 +51,7 @@ export function PlansTab({ athleteId, canManage }: { athleteId: string; canManag
 
       <div className="grid gap-3 sm:grid-cols-2">
         {plans?.map((plan) => (
-          <Link key={plan.id} to={`/athletes/${athleteId}/plans/${plan.id}`}>
+          <Link key={plan.id} to={`${planLinkPrefix}/plans/${plan.id}`}>
             <Card className="transition-shadow hover:shadow-md">
               <CardContent className="flex flex-col gap-2 pt-4">
                 <div className="flex items-center justify-between">
@@ -65,7 +68,7 @@ export function PlansTab({ athleteId, canManage }: { athleteId: string; canManag
         ))}
       </div>
 
-      <CreatePlanDialog athleteId={athleteId} open={createOpen} onOpenChange={setCreateOpen} />
+      <CreatePlanDialog owner={owner} open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   )
 }
