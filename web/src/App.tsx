@@ -22,6 +22,7 @@ import { OrganisationsListPage } from '@/features/admin/OrganisationsListPage'
 import { OrganisationDetailPage } from '@/features/admin/OrganisationDetailPage'
 import { MyTeamPage } from '@/features/admin/MyTeamPage'
 import { AuditLogPage } from '@/features/admin/AuditLogPage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -7,6 +7,7 @@ import {
   House,
   LayoutDashboard,
   MessageCircle,
+  Settings,
   Siren,
   Users,
   UsersRound,
@@ -103,6 +104,10 @@ export function Sidebar() {
             Notifications
           </NavLink>
         )}
+        <NavLink to="/settings" className={linkClass}>
+          <Settings className="h-4 w-4" />
+          Settings
+        </NavLink>
       </nav>
     </aside>
   )

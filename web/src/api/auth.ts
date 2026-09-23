@@ -61,3 +61,16 @@ export async function fetchMe(): Promise<AuthContext> {
   const res = await apiClient.get<AuthContext>('/auth/me')
   return res.data
 }
+
+export async function enableMfa(): Promise<{ secret: string; keyUri: string }> {
+  const res = await apiClient.post<{ secret: string; keyUri: string }>('/auth/mfa/enable')
+  return res.data
+}
+
+export async function verifyMfa(code: string): Promise<void> {
+  await apiClient.post('/auth/mfa/verify', { code })
+}
+
+export async function disableMfa(code: string): Promise<void> {
+  await apiClient.post('/auth/mfa/disable', { code })
+}
