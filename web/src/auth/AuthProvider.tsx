@@ -5,6 +5,7 @@ import {
   login as apiLogin,
   logout as apiLogout,
   refresh as apiRefresh,
+  resetPassword as apiResetPassword,
 } from '@/api/auth'
 import { getAccessToken, setAccessToken, setOnSessionExpired } from '@/api/client'
 import type { AuthContext as AuthCtxType, Role } from '@/api/types'
@@ -15,6 +16,7 @@ interface AuthState {
   status: 'loading' | 'authenticated' | 'unauthenticated'
   login: (input: LoginInput) => Promise<void>
   acceptInvite: (token: string, password: string) => Promise<void>
+  resetPassword: (token: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -76,6 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authenticated')
   }, [])
 
+  const resetPassword = useCallback(async (token: string, password: string) => {
+    const { accessToken } = await apiResetPassword({ token, password })
+    setAccessToken(accessToken)
+    const me = await fetchMe()
+    setCtx(me)
+    setStatus('authenticated')
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await apiLogout()
@@ -85,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession])
 
   return (
-    <AuthContext.Provider value={{ ctx, status, login, acceptInvite, logout }}>
+    <AuthContext.Provider value={{ ctx, status, login, acceptInvite, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   )

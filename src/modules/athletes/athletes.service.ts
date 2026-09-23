@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import * as argon2 from 'argon2';
 import { Prisma } from '@prisma/client';
@@ -13,6 +14,7 @@ import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { buildAthleteScopeFilter } from '../../common/scope/scope-filters';
 import { generateInviteToken } from '../../common/invite-token';
+import { EmailService } from '../email/email.service';
 import { InviteAthleteDto } from './dto/invite-athlete.dto';
 import { UpdateAthleteDto } from './dto/update-athlete.dto';
 
@@ -40,7 +42,11 @@ function toJsonInput(
 
 @Injectable()
 export class AthletesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
+  ) {}
 
   /**
    * Coach invites onto their own roster (coachId is always the caller's
@@ -48,9 +54,10 @@ export class AthletesService {
    * starts INVITED with an unusable placeholder password (login already
    * rejects non-ACTIVE users regardless - this is defence in depth, not the
    * only guard) and a one-time token the athlete uses to activate their own
-   * account via POST /auth/accept-invite. There's no transactional email
-   * service in this codebase yet, so the raw token is returned directly to
-   * the inviting coach to share by whatever channel they already use.
+   * account via POST /auth/accept-invite. The raw token is both emailed
+   * (EmailService - logs to the console instead of sending when no SMTP is
+   * configured) and returned directly to the inviting coach, who can still
+   * share it by whatever channel they'd prefer.
    */
   async invite(ctx: AuthContext, coachId: string, dto: InviteAthleteDto) {
     if (ctx.role === Role.COACH && ctx.coachId !== coachId) {
@@ -93,6 +100,7 @@ export class AthletesService {
       });
     });
 
+    await this.sendInviteEmail(dto.email, rawToken);
     return { ...athlete, inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
   }
 
@@ -112,7 +120,17 @@ export class AthletesService {
       data: { inviteTokenHash: tokenHash, inviteTokenExpiresAt: expiresAt },
     });
 
+    await this.sendInviteEmail(athlete.user.email, rawToken);
     return { inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
+  }
+
+  private async sendInviteEmail(email: string, rawToken: string): Promise<void> {
+    const acceptUrl = `${this.configService.get<string>('corsOrigin')}/accept-invite?token=${rawToken}`;
+    await this.emailService.send({
+      to: email,
+      subject: "You've been invited to Ubuntu Run",
+      text: `Set up your account here: ${acceptUrl}`,
+    });
   }
 
   /** Own roster only - a coach never sees another coach's athletes. */

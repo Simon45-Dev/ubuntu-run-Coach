@@ -9,18 +9,27 @@ vi.mock('@/api/auth', () => ({
   login: vi.fn(),
   logout: vi.fn(),
   acceptInvite: vi.fn(),
+  resetPassword: vi.fn(),
 }))
 
-import { acceptInvite, fetchMe, login, logout, refresh } from '@/api/auth'
+import { acceptInvite, fetchMe, login, logout, refresh, resetPassword } from '@/api/auth'
 
 function Probe() {
-  const { ctx, status, login: doLogin, acceptInvite: doAcceptInvite, logout: doLogout } = useAuth()
+  const {
+    ctx,
+    status,
+    login: doLogin,
+    acceptInvite: doAcceptInvite,
+    resetPassword: doResetPassword,
+    logout: doLogout,
+  } = useAuth()
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="role">{ctx?.role ?? 'none'}</span>
       <button onClick={() => void doLogin({ email: 'a@b.com', password: 'password123' })}>login</button>
       <button onClick={() => void doAcceptInvite('raw-token', 'newpassword123')}>accept-invite</button>
+      <button onClick={() => void doResetPassword('reset-token', 'newpassword123')}>reset-password</button>
       <button onClick={() => void doLogout()}>logout</button>
     </div>
   )
@@ -96,5 +105,23 @@ describe('AuthProvider', () => {
     await user.click(screen.getByText('accept-invite'))
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authenticated'))
     expect(acceptInvite).toHaveBeenCalledWith({ token: 'raw-token', password: 'newpassword123' })
+  })
+
+  it('resets a password and becomes authenticated', async () => {
+    vi.mocked(refresh).mockResolvedValue({ accessToken: null })
+    vi.mocked(resetPassword).mockResolvedValue({ accessToken: 'token-999' })
+    vi.mocked(fetchMe).mockResolvedValue({ userId: 'u4', role: 'COACH', coachId: 'c2' })
+
+    const user = userEvent.setup()
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'))
+
+    await user.click(screen.getByText('reset-password'))
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authenticated'))
+    expect(resetPassword).toHaveBeenCalledWith({ token: 'reset-token', password: 'newpassword123' })
   })
 })

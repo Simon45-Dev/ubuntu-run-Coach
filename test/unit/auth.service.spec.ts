@@ -24,14 +24,16 @@ function buildService(overrides: { userRecord: unknown }) {
       })[key],
   };
   const mfaService = { decryptSecret: jest.fn(), verifyCode: jest.fn() };
+  const emailService = { send: jest.fn().mockResolvedValue(undefined) };
 
   const service = new AuthService(
     prisma as never,
     jwtService as never,
     configService as never,
     mfaService as never,
+    emailService as never,
   );
-  return { service, prisma, mfaService };
+  return { service, prisma, mfaService, emailService };
 }
 
 describe('AuthService.login', () => {

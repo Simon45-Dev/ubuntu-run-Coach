@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
@@ -6,6 +7,7 @@ import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { generateInviteToken } from '../../common/invite-token';
+import { EmailService } from '../email/email.service';
 import { InviteCoachDto } from './dto/invite-coach.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
 
@@ -13,15 +15,18 @@ const COACH_INCLUDE = { user: { select: { id: true, email: true, name: true, sta
 
 @Injectable()
 export class CoachesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
+  ) {}
 
   /**
    * PLATFORM_ADMIN only. Mirrors AthletesService.invite: no password is
    * chosen here - the account starts INVITED with a placeholder password
-   * and a one-time token, returned directly to the admin to share (there's
-   * no transactional email service in this codebase yet) since the same
-   * POST /auth/accept-invite endpoint activates any invited user regardless
-   * of role.
+   * and a one-time token, both emailed (EmailService) and returned directly
+   * to the inviting admin, since the same POST /auth/accept-invite endpoint
+   * activates any invited user regardless of role.
    */
   async invite(organisationId: string, dto: InviteCoachDto) {
     const org = await this.prisma.organisation.findFirst({
@@ -62,6 +67,7 @@ export class CoachesService {
       });
     });
 
+    await this.sendInviteEmail(dto.email, rawToken);
     return { ...coach, inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
   }
 
@@ -84,7 +90,17 @@ export class CoachesService {
       data: { inviteTokenHash: tokenHash, inviteTokenExpiresAt: expiresAt },
     });
 
+    await this.sendInviteEmail(coach.user.email, rawToken);
     return { inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
+  }
+
+  private async sendInviteEmail(email: string, rawToken: string): Promise<void> {
+    const acceptUrl = `${this.configService.get<string>('corsOrigin')}/accept-invite?token=${rawToken}`;
+    await this.emailService.send({
+      to: email,
+      subject: "You've been invited to Ubuntu Run",
+      text: `Set up your account here: ${acceptUrl}`,
+    });
   }
 
   async findAllForOrganisation(ctx: AuthContext, organisationId: string) {

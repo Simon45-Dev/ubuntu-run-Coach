@@ -5,12 +5,18 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../database/prisma.service';
 import { MfaService } from './mfa.service';
+import { EmailService } from '../email/email.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
+import { generateInviteToken } from '../../common/invite-token';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+
+const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour - shorter than the 7-day invite TTL
 
 export interface TokenPair {
   accessToken: string;
@@ -24,6 +30,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mfaService: MfaService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -138,6 +145,68 @@ export class AuthService {
         status: UserStatus.ACTIVE,
         inviteTokenHash: null,
         inviteTokenExpiresAt: null,
+        lastLoginAt: new Date(),
+      },
+      include: { coachProfile: true, athleteProfile: true },
+    });
+
+    const authContext = this.buildAuthContext(
+      updated,
+      updated.coachProfile?.id,
+      updated.coachProfile?.organisationId ?? updated.athleteProfile?.organisationId ?? undefined,
+      updated.athleteProfile?.id,
+    );
+    return this.issueTokens(authContext);
+  }
+
+  /**
+   * Always resolves the same way regardless of whether the email exists or
+   * the account is ACTIVE - same constant-shape-failure convention as
+   * login, so a caller can't use this to enumerate registered emails. The
+   * raw token is only ever emailed (or, with no SMTP configured, logged to
+   * the server console by EmailService) - never returned here.
+   */
+  async forgotPassword(dto: ForgotPasswordDto): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (!user || user.deletedAt || user.status !== UserStatus.ACTIVE) {
+      return;
+    }
+
+    const { rawToken, tokenHash, expiresAt } = generateInviteToken(RESET_TTL_MS);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordResetTokenHash: tokenHash, passwordResetTokenExpiresAt: expiresAt },
+    });
+
+    const resetUrl = `${this.configService.get<string>('corsOrigin')}/reset-password?token=${rawToken}`;
+    await this.emailService.send({
+      to: user.email,
+      subject: 'Reset your Ubuntu Run password',
+      text: `Reset your password here (expires in 1 hour): ${resetUrl}`,
+    });
+  }
+
+  /** Expired, invalid, and already-used tokens all look identical (401). */
+  async resetPassword(dto: ResetPasswordDto): Promise<TokenPair> {
+    const tokenHash = this.hashToken(dto.token);
+    const user = await this.prisma.user.findFirst({
+      where: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetTokenExpiresAt: { gt: new Date() },
+      },
+      include: { coachProfile: true, athleteProfile: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired reset link');
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetTokenHash: null,
+        passwordResetTokenExpiresAt: null,
         lastLoginAt: new Date(),
       },
       include: { coachProfile: true, athleteProfile: true },

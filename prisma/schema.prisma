@@ -165,6 +165,13 @@ model User {
   inviteTokenHash      String?   @unique
   inviteTokenExpiresAt DateTime?
 
+  /// Set only while a password reset is pending; cleared once used. Kept
+  /// separate from the invite fields above since reset must work for an
+  /// already-ACTIVE user, not just one in INVITED status. See
+  /// AuthService.forgotPassword/resetPassword.
+  passwordResetTokenHash      String?   @unique
+  passwordResetTokenExpiresAt DateTime?
+
   coachProfile      Coach?
   athleteProfile    Athlete?
   refreshTokens     RefreshToken[]

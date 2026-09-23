@@ -19,6 +19,11 @@ export interface AcceptInviteInput {
   password: string
 }
 
+export interface ResetPasswordInput {
+  token: string
+  password: string
+}
+
 export async function login(input: LoginInput): Promise<{ accessToken: string }> {
   const res = await apiClient.post<{ accessToken: string }>('/auth/login', input)
   return res.data
@@ -31,6 +36,15 @@ export async function register(input: RegisterInput): Promise<{ accessToken: str
 
 export async function acceptInvite(input: AcceptInviteInput): Promise<{ accessToken: string }> {
   const res = await apiClient.post<{ accessToken: string }>('/auth/accept-invite', input)
+  return res.data
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await apiClient.post('/auth/forgot-password', { email })
+}
+
+export async function resetPassword(input: ResetPasswordInput): Promise<{ accessToken: string }> {
+  const res = await apiClient.post<{ accessToken: string }>('/auth/reset-password', input)
   return res.data
 }
 

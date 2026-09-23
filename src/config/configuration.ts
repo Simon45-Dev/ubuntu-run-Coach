@@ -10,4 +10,11 @@ export default () => ({
     refreshTtl: process.env.JWT_REFRESH_TTL,
   },
   mfaEncryptionKey: process.env.MFA_ENCRYPTION_KEY,
+  email: {
+    smtpHost: process.env.SMTP_HOST,
+    smtpPort: parseInt(process.env.SMTP_PORT ?? '587', 10),
+    smtpUser: process.env.SMTP_USER,
+    smtpPass: process.env.SMTP_PASS,
+    fromAddress: process.env.EMAIL_FROM_ADDRESS ?? 'no-reply@ubunturun.dev',
+  },
 });
