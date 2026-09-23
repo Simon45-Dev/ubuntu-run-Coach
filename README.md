@@ -42,15 +42,23 @@ Unit tests have no external dependencies:
 npm run test
 ```
 
-E2E tests require a live Postgres reachable at `DATABASE_URL` (the
-docker-compose instance works). They run each spec file against real
-migrations, so run migrations first:
+E2E tests run against a **dedicated `ubuntu_run_test` database, never your
+everyday dev database** - `test/e2e/setup.ts` unconditionally points
+`DATABASE_URL` at it, regardless of what your `.env` says, because every
+spec's `afterEach` deletes every row in every table. Create it once and
+apply migrations to it (the docker-compose instance works for the server
+itself):
 
 ```bash
 docker compose up -d
-npx prisma migrate deploy
+createdb -h localhost -U ubuntu_run ubuntu_run_test   # one-time setup
+DATABASE_URL=postgresql://ubuntu_run:ubuntu_run@localhost:5432/ubuntu_run_test npx prisma migrate deploy
 npm run test:e2e
 ```
+
+CI provisions its own `ubuntu_run_test` database from a fresh Postgres
+container per run (`.github/workflows/ci.yml`), so this only matters for
+running the suite locally.
 
 Start with `test/e2e/rbac-isolation.e2e-spec.ts` if you're checking that a
 schema or guard change hasn't broken data isolation - it's the highest-risk
