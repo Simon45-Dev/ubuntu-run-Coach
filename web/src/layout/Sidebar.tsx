@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LogOut, MessageCircle, Siren, Users, UsersRound } from 'lucide-react'
+import { ClipboardList, LogOut, MessageCircle, Siren, Users, UsersRound } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import logo from '@/assets/logo.png'
 import { cn } from '@/lib/utils'
@@ -34,6 +34,12 @@ export function Sidebar() {
           <NavLink to="/groups" className={linkClass}>
             <UsersRound className="h-4 w-4" />
             Groups
+          </NavLink>
+        )}
+        {isCoach && (
+          <NavLink to="/templates" className={linkClass}>
+            <ClipboardList className="h-4 w-4" />
+            Templates
           </NavLink>
         )}
         {ctx?.role === 'ATHLETE' && ctx.athleteId && (

@@ -90,7 +90,9 @@ export interface TrainingPlan {
   id: string
   organisationId: string
   coachId: string
-  athleteId: string
+  // A plan targets either an athlete or a group, never both - see the
+  // backend's Groups slice.
+  athleteId: string | null
   groupId: string | null
   name: string
   startDate: string
@@ -101,6 +103,31 @@ export interface TrainingPlan {
   status: TrainingPlanStatus
   createdAt: string
   updatedAt: string
+}
+
+export interface TemplateWorkout {
+  id: string
+  templateId: string
+  dayOffset: number
+  type: WorkoutType
+  distanceTargetKm: string | null
+  durationTargetSec: number | null
+  paceTarget: string | null
+  hrZoneTarget: string | null
+  rpeTarget: number | null
+  instructions: string | null
+}
+
+export interface Template {
+  id: string
+  coachId: string
+  organisationId: string
+  name: string
+  goal: string | null
+  phase: TrainingPlanPhase | null
+  createdAt: string
+  updatedAt: string
+  workouts: TemplateWorkout[]
 }
 
 export interface Workout {

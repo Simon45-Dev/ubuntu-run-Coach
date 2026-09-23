@@ -11,6 +11,8 @@ import { MessagesPage } from '@/features/messages/MessagesPage'
 import { ActionCentrePage } from '@/features/action-centre/ActionCentrePage'
 import { GroupsListPage } from '@/features/groups/GroupsListPage'
 import { GroupDetailPage } from '@/features/groups/GroupDetailPage'
+import { TemplatesListPage } from '@/features/templates/TemplatesListPage'
+import { TemplateDetailPage } from '@/features/templates/TemplateDetailPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -48,6 +50,8 @@ export default function App() {
             <Route path="/groups" element={<GroupsListPage />} />
             <Route path="/groups/:groupId" element={<GroupDetailPage />} />
             <Route path="/groups/:groupId/plans/:planId" element={<PlanDetailPage />} />
+            <Route path="/templates" element={<TemplatesListPage />} />
+            <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
           </Route>
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />
