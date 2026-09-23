@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AthletesService } from './athletes.service';
-import { CreateAthleteDto } from './dto/create-athlete.dto';
+import { InviteAthleteDto } from './dto/invite-athlete.dto';
 import { UpdateAthleteDto } from './dto/update-athlete.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -23,12 +23,19 @@ export class AthletesController {
   @Post('coaches/:coachId/athletes')
   @Roles(Role.COACH, Role.PLATFORM_ADMIN)
   @ScopeResource('coach', 'coachId')
-  create(
+  invite(
     @CurrentUser() ctx: AuthContext,
     @Param('coachId') coachId: string,
-    @Body() dto: CreateAthleteDto,
+    @Body() dto: InviteAthleteDto,
   ) {
-    return this.athletesService.create(ctx, coachId, dto);
+    return this.athletesService.invite(ctx, coachId, dto);
+  }
+
+  @Post('athletes/:id/resend-invite')
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @ScopeResource('athlete')
+  resendInvite(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
+    return this.athletesService.resendInvite(ctx, id);
   }
 
   @Get('coaches/:coachId/athletes')

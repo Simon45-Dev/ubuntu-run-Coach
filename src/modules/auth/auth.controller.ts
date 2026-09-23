@@ -15,6 +15,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { MfaVerifyDto } from './dto/mfa-verify.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -41,6 +42,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const tokens = await this.authService.login(dto);
+    this.setRefreshCookie(res, tokens.refreshToken);
+    return { accessToken: tokens.accessToken };
+  }
+
+  @Post('accept-invite')
+  @HttpCode(HttpStatus.OK)
+  async acceptInvite(@Body() dto: AcceptInviteDto, @Res({ passthrough: true }) res: Response) {
+    const tokens = await this.authService.acceptInvite(dto);
     this.setRefreshCookie(res, tokens.refreshToken);
     return { accessToken: tokens.accessToken };
   }

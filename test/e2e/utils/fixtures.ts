@@ -43,6 +43,13 @@ export async function registerCoach(
   };
 }
 
+/**
+ * Athletes are invite-based (AthletesService.invite / POST
+ * /auth/accept-invite), not created with a coach-chosen password. This
+ * fixture absorbs the invite-then-accept round trip internally so every
+ * other spec file can keep calling loginAs(app, athlete.email,
+ * athlete.password) unchanged - the fixture's return shape hasn't moved.
+ */
 export async function createAthleteForCoach(
   app: INestApplication,
   coachAccessToken: string,
@@ -51,17 +58,19 @@ export async function createAthleteForCoach(
 ) {
   const email =
     overrides.email ?? `athlete-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
+  const password = overrides.password ?? DEFAULT_PASSWORD;
   const res = await request(app.getHttpServer())
     .post(`/api/v1/coaches/${coachId}/athletes`)
     .set('Authorization', `Bearer ${coachAccessToken}`)
-    .send({
-      email,
-      password: overrides.password ?? DEFAULT_PASSWORD,
-      name: overrides.name ?? 'Test Athlete',
-    })
+    .send({ email, name: overrides.name ?? 'Test Athlete' })
     .expect(201);
 
-  return { id: res.body.id as string, email, password: overrides.password ?? DEFAULT_PASSWORD };
+  await request(app.getHttpServer())
+    .post('/api/v1/auth/accept-invite')
+    .send({ token: res.body.inviteToken, password })
+    .expect(200);
+
+  return { id: res.body.id as string, email, password };
 }
 
 export async function loginAs(app: INestApplication, email: string, password: string) {

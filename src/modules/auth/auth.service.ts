@@ -10,6 +10,7 @@ import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { AcceptInviteDto } from './dto/accept-invite.dto';
 
 export interface TokenPair {
   accessToken: string;
@@ -104,6 +105,49 @@ export class AuthService {
       user.coachProfile?.id,
       user.coachProfile?.organisationId ?? user.athleteProfile?.organisationId ?? undefined,
       user.athleteProfile?.id,
+    );
+    return this.issueTokens(authContext);
+  }
+
+  /**
+   * Completes AthletesService.invite: sets a real password, activates the
+   * account, and logs the athlete straight in - one less step than
+   * accept-then-separately-log-in. Expired and invalid tokens look
+   * identical, matching the generic-failure convention the rest of this
+   * file already uses for login/refresh.
+   */
+  async acceptInvite(dto: AcceptInviteDto): Promise<TokenPair> {
+    const tokenHash = this.hashToken(dto.token);
+    const user = await this.prisma.user.findFirst({
+      where: {
+        inviteTokenHash: tokenHash,
+        status: UserStatus.INVITED,
+        inviteTokenExpiresAt: { gt: new Date() },
+      },
+      include: { coachProfile: true, athleteProfile: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired invite');
+    }
+
+    const passwordHash = await argon2.hash(dto.password);
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        status: UserStatus.ACTIVE,
+        inviteTokenHash: null,
+        inviteTokenExpiresAt: null,
+        lastLoginAt: new Date(),
+      },
+      include: { coachProfile: true, athleteProfile: true },
+    });
+
+    const authContext = this.buildAuthContext(
+      updated,
+      updated.coachProfile?.id,
+      updated.coachProfile?.organisationId ?? updated.athleteProfile?.organisationId ?? undefined,
+      updated.athleteProfile?.id,
     );
     return this.issueTokens(authContext);
   }

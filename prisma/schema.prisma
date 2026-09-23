@@ -159,6 +159,12 @@ model User {
   mfaType            MfaType?
   lastLoginAt        DateTime?
 
+  /// Set only while an invite is pending (status = INVITED); cleared once
+  /// accepted. See AthletesService.invite/resendInvite and
+  /// AuthService.acceptInvite.
+  inviteTokenHash      String?   @unique
+  inviteTokenExpiresAt DateTime?
+
   coachProfile      Coach?
   athleteProfile    Athlete?
   refreshTokens     RefreshToken[]

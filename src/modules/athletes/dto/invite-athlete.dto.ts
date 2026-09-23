@@ -1,15 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
 
-export class CreateAthleteDto {
+export class InviteAthleteDto {
   @ApiProperty()
   @IsEmail()
   email: string;
-
-  @ApiProperty({ minLength: 10 })
-  @IsString()
-  @MinLength(10)
-  password: string;
 
   @ApiProperty()
   @IsString()

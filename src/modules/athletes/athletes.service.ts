@@ -1,4 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { createHash, randomBytes } from 'crypto';
 import * as argon2 from 'argon2';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -6,8 +12,19 @@ import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { buildAthleteScopeFilter } from '../../common/scope/scope-filters';
-import { CreateAthleteDto } from './dto/create-athlete.dto';
+import { InviteAthleteDto } from './dto/invite-athlete.dto';
 import { UpdateAthleteDto } from './dto/update-athlete.dto';
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function generateInviteToken(): { rawToken: string; tokenHash: string; expiresAt: Date } {
+  const rawToken = randomBytes(48).toString('hex');
+  return {
+    rawToken,
+    tokenHash: createHash('sha256').update(rawToken).digest('hex'),
+    expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+  };
+}
 
 // `coach` is included (not just coachId) so an athlete's own profile response
 // can surface who their coach is - e.g. for the web dashboard's messaging UI,
@@ -35,8 +52,17 @@ function toJsonInput(
 export class AthletesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Coach creates on their own roster (coachId is always the caller's own), or PLATFORM_ADMIN. */
-  async create(ctx: AuthContext, coachId: string, dto: CreateAthleteDto) {
+  /**
+   * Coach invites onto their own roster (coachId is always the caller's
+   * own), or PLATFORM_ADMIN. No password is set by the coach - the account
+   * starts INVITED with an unusable placeholder password (login already
+   * rejects non-ACTIVE users regardless - this is defence in depth, not the
+   * only guard) and a one-time token the athlete uses to activate their own
+   * account via POST /auth/accept-invite. There's no transactional email
+   * service in this codebase yet, so the raw token is returned directly to
+   * the inviting coach to share by whatever channel they already use.
+   */
+  async invite(ctx: AuthContext, coachId: string, dto: InviteAthleteDto) {
     if (ctx.role === Role.COACH && ctx.coachId !== coachId) {
       throw new ForbiddenException();
     }
@@ -50,15 +76,19 @@ export class AthletesService {
       throw new ForbiddenException('An account with this email already exists');
     }
 
-    const passwordHash = await argon2.hash(dto.password);
-    return this.prisma.$transaction(async (tx) => {
+    const { rawToken, tokenHash, expiresAt } = generateInviteToken();
+    const placeholderPasswordHash = await argon2.hash(randomBytes(32).toString('hex'));
+
+    const athlete = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           email: dto.email,
-          passwordHash,
+          passwordHash: placeholderPasswordHash,
           name: dto.name,
           role: Role.ATHLETE,
-          status: UserStatus.ACTIVE,
+          status: UserStatus.INVITED,
+          inviteTokenHash: tokenHash,
+          inviteTokenExpiresAt: expiresAt,
         },
       });
       return tx.athlete.create({
@@ -72,6 +102,27 @@ export class AthletesService {
         include: ATHLETE_INCLUDE,
       });
     });
+
+    return { ...athlete, inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
+  }
+
+  /**
+   * Regenerates the invite token for an athlete who hasn't accepted yet -
+   * covers a lost/expired link, since the token is only ever shown once.
+   */
+  async resendInvite(ctx: AuthContext, athleteId: string) {
+    const athlete = await this.findOne(ctx, athleteId);
+    if (athlete.user.status !== UserStatus.INVITED) {
+      throw new BadRequestException('This athlete has already accepted their invite');
+    }
+
+    const { rawToken, tokenHash, expiresAt } = generateInviteToken();
+    await this.prisma.user.update({
+      where: { id: athlete.userId },
+      data: { inviteTokenHash: tokenHash, inviteTokenExpiresAt: expiresAt },
+    });
+
+    return { inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
   }
 
   /** Own roster only - a coach never sees another coach's athletes. */
