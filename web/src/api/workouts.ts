@@ -36,6 +36,13 @@ export async function deleteWorkout(id: string): Promise<void> {
   await apiClient.delete(`/workouts/${id}`)
 }
 
+export async function importWorkoutsCsv(trainingPlanId: string, file: File): Promise<Workout[]> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await apiClient.post<Workout[]>(`/training-plans/${trainingPlanId}/workouts/import`, formData)
+  return res.data
+}
+
 export interface SubmitWorkoutResultInput {
   actualDistanceKm?: number
   actualDurationSec?: number

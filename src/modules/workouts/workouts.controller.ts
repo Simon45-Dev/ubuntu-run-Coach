@@ -1,5 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { WorkoutsService } from './workouts.service';
 import { CreateWorkoutDto } from './dto/create-workout.dto';
 import { UpdateWorkoutDto } from './dto/update-workout.dto';
@@ -27,6 +40,21 @@ export class WorkoutsController {
     @Body() dto: CreateWorkoutDto,
   ) {
     return this.workoutsService.create(ctx, trainingPlanId, dto);
+  }
+
+  @Post('training-plans/:trainingPlanId/workouts/import')
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 1_000_000 } }))
+  importCsv(
+    @CurrentUser() ctx: AuthContext,
+    @Param('trainingPlanId') trainingPlanId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    return this.workoutsService.importCsv(ctx, trainingPlanId, file.buffer);
   }
 
   @Get('training-plans/:trainingPlanId/workouts')

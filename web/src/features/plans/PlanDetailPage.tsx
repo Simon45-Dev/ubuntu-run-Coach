@@ -24,6 +24,7 @@ import { calendarLocalizer } from '@/lib/calendarLocalizer'
 import { formatDate } from '@/lib/format'
 import { WorkoutDialog } from './WorkoutDialog'
 import { WorkoutDetailDialog } from './WorkoutDetailDialog'
+import { ImportWorkoutsCsvDialog } from './ImportWorkoutsCsvDialog'
 import { WORKOUT_TYPE_STYLES } from './workoutTypeStyles'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
@@ -50,6 +51,7 @@ export function PlanDetailPage() {
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null)
   const [viewingWorkout, setViewingWorkout] = useState<Workout | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const { data: plan, isLoading: planLoading } = useQuery({
     queryKey: ['training-plan', planId],
@@ -146,9 +148,14 @@ export function PlanDetailPage() {
       </div>
 
       {canManage && (
-        <Button variant="outline" className="self-start" onClick={() => setCreateDate(new Date())}>
-          Add workout
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCreateDate(new Date())}>
+            Add workout
+          </Button>
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            Import CSV
+          </Button>
+        </div>
       )}
 
       <WorkoutDialog
@@ -174,6 +181,7 @@ export function PlanDetailPage() {
           setViewingWorkout(null)
         }}
       />
+      <ImportWorkoutsCsvDialog trainingPlanId={planId!} open={importOpen} onOpenChange={setImportOpen} />
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
