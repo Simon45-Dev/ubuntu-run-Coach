@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -10,7 +11,6 @@ import { Audit } from '../../common/decorators/audit.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -31,8 +31,8 @@ export class UsersController {
 
   @Get()
   @Roles(Role.PLATFORM_ADMIN)
-  findAll(@Query() pagination: PaginationQueryDto) {
-    return this.usersService.findAll(pagination);
+  findAll(@Query() query: ListUsersQueryDto) {
+    return this.usersService.findAll(query);
   }
 
   @Get(':id')

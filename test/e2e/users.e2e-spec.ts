@@ -84,4 +84,39 @@ describe('Users (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
   });
+
+  it('PLATFORM_ADMIN can search users by name/email substring', async () => {
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+    const uniqueName = `Findme-${Date.now()}`;
+    const coach = await registerCoach(app, { name: uniqueName });
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/users')
+      .query({ search: uniqueName })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(res.body.items.map((u: { id: string }) => u.id)).toEqual([coach.userId]);
+
+    const noMatch = await request(app.getHttpServer())
+      .get('/api/v1/users')
+      .query({ search: `nobody-${Date.now()}` })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(noMatch.body.items).toHaveLength(0);
+  });
+
+  it('PLATFORM_ADMIN can filter users by role', async () => {
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+    await registerCoach(app);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/users')
+      .query({ role: 'PLATFORM_ADMIN' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(res.body.items.every((u: { role: string }) => u.role === 'PLATFORM_ADMIN')).toBe(true);
+    expect(res.body.items.length).toBeGreaterThan(0);
+  });
 });

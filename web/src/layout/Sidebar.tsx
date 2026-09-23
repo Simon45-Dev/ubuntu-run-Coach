@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Settings,
   Siren,
+  UserCog,
   Users,
   UsersRound,
 } from 'lucide-react'
@@ -36,6 +37,12 @@ export function Sidebar() {
           <NavLink to="/admin" className={linkClass}>
             <Building2 className="h-4 w-4" />
             Organisations
+          </NavLink>
+        )}
+        {isAdmin && (
+          <NavLink to="/admin/users" className={linkClass}>
+            <UserCog className="h-4 w-4" />
+            Users
           </NavLink>
         )}
         {isAdmin && (

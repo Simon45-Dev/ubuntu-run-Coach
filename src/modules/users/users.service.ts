@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { UpdateMeDto } from './dto/update-me.dto';
+import { ListUsersQueryDto } from './dto/list-users-query.dto';
 
 const PUBLIC_USER_SELECT = {
   id: true,
@@ -36,17 +37,29 @@ export class UsersService {
   }
 
   /** PLATFORM_ADMIN only - route already restricted by @Roles. */
-  async findAll(pagination: PaginationQueryDto) {
-    const { page, pageSize } = pagination;
+  async findAll(query: ListUsersQueryDto) {
+    const { page, pageSize, search, role } = query;
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      ...(role ? { role } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
     const [items, total] = await Promise.all([
       this.prisma.user.findMany({
-        where: { deletedAt: null },
+        where,
         select: PUBLIC_USER_SELECT,
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.user.count({ where: { deletedAt: null } }),
+      this.prisma.user.count({ where }),
     ]);
     return { items, total, page, pageSize };
   }

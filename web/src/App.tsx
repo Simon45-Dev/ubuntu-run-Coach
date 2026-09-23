@@ -22,6 +22,7 @@ import { OrganisationsListPage } from '@/features/admin/OrganisationsListPage'
 import { OrganisationDetailPage } from '@/features/admin/OrganisationDetailPage'
 import { MyTeamPage } from '@/features/admin/MyTeamPage'
 import { AuditLogPage } from '@/features/admin/AuditLogPage'
+import { UsersListPage } from '@/features/admin/UsersListPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
 function RootRedirect() {
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/admin" element={<OrganisationsListPage />} />
             <Route path="/admin/organisations/:organisationId" element={<OrganisationDetailPage />} />
             <Route path="/admin/audit-log" element={<AuditLogPage />} />
+            <Route path="/admin/users" element={<UsersListPage />} />
           </Route>
           <Route element={<ProtectedRoute allow={['COACH', 'PLATFORM_ADMIN']} />}>
             <Route path="/dashboard" element={<CoachDashboardPage />} />
