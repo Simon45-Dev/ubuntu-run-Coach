@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ListAuditLogQueryDto } from './dto/list-audit-log-query.dto';
 
 export interface RecordAuditEntryInput {
   actorUserId?: string | null;
@@ -38,15 +38,22 @@ export class AuditLogService {
    * here with one extra batched query instead of a per-row lookup, so the
    * UI doesn't have to show raw UUIDs.
    */
-  async findAll(pagination: PaginationQueryDto) {
-    const { page, pageSize } = pagination;
+  async findAll(query: ListAuditLogQueryDto) {
+    const { page, pageSize, action, from, to } = query;
+    const where: Prisma.AuditLogWhereInput = {
+      ...(action ? { action } : {}),
+      ...(from || to
+        ? { createdAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } }
+        : {}),
+    };
     const [items, total] = await Promise.all([
       this.prisma.auditLog.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.auditLog.count(),
+      this.prisma.auditLog.count({ where }),
     ]);
 
     const actorIds = [...new Set(items.map((i) => i.actorUserId).filter((id): id is string => !!id))];

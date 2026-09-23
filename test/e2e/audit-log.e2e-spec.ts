@@ -99,6 +99,52 @@ describe('Audit log (e2e)', () => {
     expect(entry.actorEmail).toBe(admin.email);
   });
 
+  it('PLATFORM_ADMIN can filter audit log entries by action', async () => {
+    const coach = await registerCoach(app);
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/users/${coach.userId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'SUSPENDED' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .delete(`/api/v1/users/${coach.userId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/audit-logs')
+      .query({ action: 'USER_DELETED' })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(res.body.items.length).toBeGreaterThan(0);
+    expect(res.body.items.every((i: { action: string }) => i.action === 'USER_DELETED')).toBe(true);
+  });
+
+  it('PLATFORM_ADMIN can filter audit log entries by a date range', async () => {
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+    const entry = await prisma.auditLog.create({
+      data: { action: 'DATE_RANGE_TEST', targetEntityType: 'test', targetEntityId: 'test-1' },
+    });
+
+    const inRange = await request(app.getHttpServer())
+      .get('/api/v1/audit-logs')
+      .query({ action: 'DATE_RANGE_TEST', from: new Date(Date.now() - 60_000).toISOString() })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(inRange.body.items.map((i: { id: string }) => i.id)).toContain(entry.id);
+
+    const outOfRange = await request(app.getHttpServer())
+      .get('/api/v1/audit-logs')
+      .query({ action: 'DATE_RANGE_TEST', to: new Date(Date.now() - 60_000).toISOString() })
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(outOfRange.body.items.map((i: { id: string }) => i.id)).not.toContain(entry.id);
+  });
+
   it('a non-admin cannot list audit log entries', async () => {
     const coach = await registerCoach(app);
     await request(app.getHttpServer())
