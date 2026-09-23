@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { PlansTab } from '@/features/plans/PlansTab'
+import { CheckInsTab } from '@/features/check-ins/CheckInsTab'
 import { InviteLinkDialog } from './InviteLinkDialog'
 
 export function AthleteProfilePage() {
@@ -29,6 +30,7 @@ export function AthleteProfilePage() {
   const queryClient = useQueryClient()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const canManage = ctx?.role === 'COACH' || ctx?.role === 'PLATFORM_ADMIN'
+  const isSelf = ctx?.role === 'ATHLETE' && ctx.athleteId === athleteId
 
   const { data: athlete, isLoading } = useQuery({
     queryKey: ['athlete', athleteId],
@@ -118,6 +120,7 @@ export function AthleteProfilePage() {
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="plans">Training Plans</TabsTrigger>
+          <TabsTrigger value="check-ins">Check-ins</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -172,6 +175,10 @@ export function AthleteProfilePage() {
 
         <TabsContent value="plans">
           <PlansTab owner={{ type: 'athlete', id: athlete.id }} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="check-ins">
+          <CheckInsTab athleteId={athlete.id} isSelf={isSelf} />
         </TabsContent>
       </Tabs>
 

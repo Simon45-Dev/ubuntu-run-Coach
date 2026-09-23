@@ -8,6 +8,9 @@ export type Role = (typeof ROLES)[number]
 export const USER_STATUSES = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'] as const
 export type UserStatus = (typeof USER_STATUSES)[number]
 
+export const CONSENT_TYPES = ['HEALTH_CHECKIN_DATA', 'TERMS_OF_SERVICE'] as const
+export type ConsentType = (typeof CONSENT_TYPES)[number]
+
 export const TRAINING_PLAN_PHASES = ['BASE', 'BUILD', 'PEAK', 'TAPER', 'RECOVERY'] as const
 export type TrainingPlanPhase = (typeof TRAINING_PLAN_PHASES)[number]
 
@@ -128,6 +131,28 @@ export interface Template {
   createdAt: string
   updatedAt: string
   workouts: TemplateWorkout[]
+}
+
+export interface Consent {
+  id: string
+  athleteId: string
+  consentType: ConsentType
+  policyVersion: string
+  grantedAt: string
+  withdrawnAt: string | null
+}
+
+export interface CheckIn {
+  id: string
+  athleteId: string
+  date: string
+  sleepQuality: number | null
+  energy: number | null
+  soreness: number | null
+  stress: number | null
+  motivation: number | null
+  pain: string | null
+  consentId: string
 }
 
 export interface Workout {
