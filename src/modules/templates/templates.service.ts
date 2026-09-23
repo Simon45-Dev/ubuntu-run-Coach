@@ -44,6 +44,7 @@ export class TemplatesService {
     }
     return this.prisma.trainingPlanTemplate.findMany({
       where: { coachId, deletedAt: null },
+      include: { workouts: { orderBy: { dayOffset: 'asc' } } },
     });
   }
 
