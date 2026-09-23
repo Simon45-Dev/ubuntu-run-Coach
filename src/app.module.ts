@@ -13,6 +13,8 @@ import { CoachesModule } from './modules/coaches/coaches.module';
 import { AthletesModule } from './modules/athletes/athletes.module';
 import { GroupsModule } from './modules/groups/groups.module';
 import { TemplatesModule } from './modules/templates/templates.module';
+import { RaceGoalsModule } from './modules/race-goals/race-goals.module';
+import { CoachNotesModule } from './modules/coach-notes/coach-notes.module';
 import { TrainingPlansModule } from './modules/training-plans/training-plans.module';
 import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { MessagesModule } from './modules/messages/messages.module';
@@ -33,6 +35,8 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     AthletesModule,
     GroupsModule,
     TemplatesModule,
+    RaceGoalsModule,
+    CoachNotesModule,
     TrainingPlansModule,
     WorkoutsModule,
     MessagesModule,

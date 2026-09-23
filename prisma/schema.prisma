@@ -203,6 +203,7 @@ model Coach {
   groups                Group[]
   trainingPlans         TrainingPlan[]
   trainingPlanTemplates TrainingPlanTemplate[]
+  coachNotes            CoachNote[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -235,6 +236,7 @@ model Athlete {
   groupMemberships GroupMembership[]
   workoutResults   WorkoutResult[]
   trainingPlans    TrainingPlan[]
+  coachNotes       CoachNote[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -500,6 +502,26 @@ model RaceGoal {
 
   @@index([athleteId])
   @@map("race_goals")
+}
+
+/// Private to the authoring coach - never athlete-visible. Edit/delete
+/// rights belong to whoever wrote it (coachId), not whoever currently
+/// coaches the athlete - see CoachNotesService.
+model CoachNote {
+  id        String  @id @default(uuid())
+  athleteId String
+  athlete   Athlete @relation(fields: [athleteId], references: [id])
+  coachId   String
+  coach     Coach   @relation(fields: [coachId], references: [id])
+  content   String
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([athleteId])
+  @@index([coachId])
+  @@map("coach_notes")
 }
 
 model Message {

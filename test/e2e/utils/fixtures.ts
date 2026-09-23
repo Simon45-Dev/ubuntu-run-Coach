@@ -177,6 +177,40 @@ export async function addTemplateWorkout(
   return res.body;
 }
 
+export async function createRaceGoalForAthlete(
+  app: INestApplication,
+  accessToken: string,
+  athleteId: string,
+  overrides: Partial<{ raceName: string; raceDate: string; distance: string }> = {},
+) {
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/athletes/${athleteId}/race-goals`)
+    .set('Authorization', `Bearer ${accessToken}`)
+    .send({
+      raceName: overrides.raceName ?? 'Test City Marathon',
+      raceDate: overrides.raceDate ?? new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+      distance: overrides.distance ?? 'Marathon',
+    })
+    .expect(201);
+
+  return { id: res.body.id as string };
+}
+
+export async function createCoachNote(
+  app: INestApplication,
+  coachAccessToken: string,
+  athleteId: string,
+  overrides: Partial<{ content: string }> = {},
+) {
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/athletes/${athleteId}/notes`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({ content: overrides.content ?? 'Test note content' })
+    .expect(201);
+
+  return { id: res.body.id as string };
+}
+
 export async function grantHealthConsent(
   app: INestApplication,
   athleteAccessToken: string,
