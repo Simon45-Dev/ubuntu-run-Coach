@@ -80,6 +80,7 @@ describe('analytics.util', () => {
           completed: 1,
           distanceKm: 5,
           durationSec: 1800,
+          plannedDistanceKm: 0,
         },
         {
           weekStart: '2026-03-09T00:00:00.000Z',
@@ -87,8 +88,43 @@ describe('analytics.util', () => {
           completed: 1,
           distanceKm: 8,
           durationSec: 2400,
+          plannedDistanceKm: 0,
         },
       ]);
+    });
+
+    it('sums distanceTargetKm across every scheduled workout in a week, completed or not', () => {
+      const workouts = [
+        { id: 'w1', scheduledDate: new Date('2026-03-02T00:00:00.000Z'), distanceTargetKm: 8 },
+        { id: 'w2', scheduledDate: new Date('2026-03-04T00:00:00.000Z'), distanceTargetKm: 5 },
+        { id: 'w3', scheduledDate: new Date('2026-03-09T00:00:00.000Z'), distanceTargetKm: 10 },
+      ];
+      const results = [{ workoutId: 'w1', actualDistanceKm: 7.5, actualDurationSec: 1800 }];
+
+      const summary = buildAnalyticsSummary(workouts, results, from, to);
+      expect(summary.weeklyTrend[0].plannedDistanceKm).toBe(13);
+      expect(summary.weeklyTrend[1].plannedDistanceKm).toBe(10);
+    });
+
+    it('computes avgRpeDelta only from workouts with both a target and an actual RPE', () => {
+      const workouts = [
+        { id: 'w1', scheduledDate: new Date('2026-03-02T00:00:00.000Z'), rpeTarget: 5 },
+        { id: 'w2', scheduledDate: new Date('2026-03-03T00:00:00.000Z'), rpeTarget: 6 },
+        { id: 'w3', scheduledDate: new Date('2026-03-04T00:00:00.000Z') }, // no rpeTarget
+      ];
+      const results = [
+        { workoutId: 'w1', actualDistanceKm: null, actualDurationSec: null, rpe: 7 }, // +2
+        { workoutId: 'w2', actualDistanceKm: null, actualDurationSec: null, rpe: 5 }, // -1
+        { workoutId: 'w3', actualDistanceKm: null, actualDurationSec: null, rpe: 9 }, // excluded, no target
+      ];
+
+      const summary = buildAnalyticsSummary(workouts, results, from, to);
+      expect(summary.avgRpeDelta).toBeCloseTo(0.5); // (2 + -1) / 2
+    });
+
+    it('returns a null avgRpeDelta when no workout has both a target and an actual RPE', () => {
+      const summary = buildAnalyticsSummary([], [], from, to);
+      expect(summary.avgRpeDelta).toBeNull();
     });
   });
 });

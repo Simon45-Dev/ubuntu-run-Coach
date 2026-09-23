@@ -157,6 +157,7 @@ describe('action-centre.util', () => {
           completed: 3,
           distanceKm: 20,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
         {
           weekStart: '2026-02-23T00:00:00.000Z',
@@ -164,6 +165,7 @@ describe('action-centre.util', () => {
           completed: 3,
           distanceKm: 22,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
         {
           weekStart: '2026-03-02T00:00:00.000Z',
@@ -171,6 +173,7 @@ describe('action-centre.util', () => {
           completed: 5,
           distanceKm: 40,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
       ];
       const alerts = detectTrainingSpike('a1', 'Alex', weeklyTrend, NOW);
@@ -185,6 +188,7 @@ describe('action-centre.util', () => {
           completed: 0,
           distanceKm: 0,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
         {
           weekStart: '2026-02-23T00:00:00.000Z',
@@ -192,6 +196,7 @@ describe('action-centre.util', () => {
           completed: 0,
           distanceKm: 0,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
         {
           weekStart: '2026-03-02T00:00:00.000Z',
@@ -199,6 +204,7 @@ describe('action-centre.util', () => {
           completed: 3,
           distanceKm: 15,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
       ];
       expect(detectTrainingSpike('a1', 'Alex', weeklyTrend, NOW)).toEqual([]);
@@ -212,6 +218,7 @@ describe('action-centre.util', () => {
           completed: 3,
           distanceKm: 10,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
         {
           weekStart: '2026-03-02T00:00:00.000Z',
@@ -219,6 +226,7 @@ describe('action-centre.util', () => {
           completed: 5,
           distanceKm: 40,
           durationSec: 0,
+          plannedDistanceKm: 0,
         },
       ];
       expect(detectTrainingSpike('a1', 'Alex', weeklyTrend, NOW)).toEqual([]);

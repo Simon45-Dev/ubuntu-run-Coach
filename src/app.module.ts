@@ -14,6 +14,7 @@ import { AthletesModule } from './modules/athletes/athletes.module';
 import { GroupsModule } from './modules/groups/groups.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { RaceGoalsModule } from './modules/race-goals/race-goals.module';
+import { PersonalBestsModule } from './modules/personal-bests/personal-bests.module';
 import { CoachNotesModule } from './modules/coach-notes/coach-notes.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ActionCentreModule } from './modules/action-centre/action-centre.module';
@@ -39,6 +40,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     GroupsModule,
     TemplatesModule,
     RaceGoalsModule,
+    PersonalBestsModule,
     CoachNotesModule,
     AnalyticsModule,
     ActionCentreModule,

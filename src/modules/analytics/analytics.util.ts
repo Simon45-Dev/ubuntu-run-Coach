@@ -9,12 +9,15 @@
 export interface AnalyticsWorkout {
   id: string;
   scheduledDate: Date;
+  distanceTargetKm?: number | null;
+  rpeTarget?: number | null;
 }
 
 export interface AnalyticsResult {
   workoutId: string;
   actualDistanceKm: number | null;
   actualDurationSec: number | null;
+  rpe?: number | null;
 }
 
 export interface WeeklyTrendEntry {
@@ -23,6 +26,7 @@ export interface WeeklyTrendEntry {
   completed: number;
   distanceKm: number;
   durationSec: number;
+  plannedDistanceKm: number;
 }
 
 export interface AnalyticsSummary {
@@ -31,6 +35,7 @@ export interface AnalyticsSummary {
   adherence: { scheduled: number; completed: number; rate: number | null };
   volume: { totalDistanceKm: number; totalDurationSec: number };
   weeklyTrend: WeeklyTrendEntry[];
+  avgRpeDelta: number | null;
 }
 
 /** UTC Monday of the week containing `date`. */
@@ -59,6 +64,16 @@ export function buildAnalyticsSummary(
   const totalDistanceKm = results.reduce((sum, r) => sum + (r.actualDistanceKm ?? 0), 0);
   const totalDurationSec = results.reduce((sum, r) => sum + (r.actualDurationSec ?? 0), 0);
 
+  const rpeDeltas: number[] = [];
+  for (const workout of workouts) {
+    const result = resultByWorkoutId.get(workout.id);
+    if (workout.rpeTarget != null && result?.rpe != null) {
+      rpeDeltas.push(result.rpe - workout.rpeTarget);
+    }
+  }
+  const avgRpeDelta =
+    rpeDeltas.length === 0 ? null : rpeDeltas.reduce((sum, d) => sum + d, 0) / rpeDeltas.length;
+
   const weekBuckets = new Map<string, WeeklyTrendEntry>();
   for (const workout of workouts) {
     const weekStart = getWeekStart(workout.scheduledDate).toISOString();
@@ -68,8 +83,10 @@ export function buildAnalyticsSummary(
       completed: 0,
       distanceKm: 0,
       durationSec: 0,
+      plannedDistanceKm: 0,
     };
     bucket.scheduled += 1;
+    bucket.plannedDistanceKm += workout.distanceTargetKm ?? 0;
     const result = resultByWorkoutId.get(workout.id);
     if (result) {
       bucket.completed += 1;
@@ -88,5 +105,6 @@ export function buildAnalyticsSummary(
     adherence: { scheduled, completed, rate },
     volume: { totalDistanceKm, totalDurationSec },
     weeklyTrend,
+    avgRpeDelta,
   };
 }

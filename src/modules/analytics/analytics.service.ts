@@ -38,7 +38,7 @@ export class AnalyticsService {
         scheduledDate: { gte: from, lte: to },
         trainingPlan: trainingPlanFilter,
       },
-      select: { id: true, scheduledDate: true },
+      select: { id: true, scheduledDate: true, distanceTargetKm: true, rpeTarget: true },
     });
 
     const results = await this.prisma.workoutResult.findMany({
@@ -51,15 +51,21 @@ export class AnalyticsService {
           trainingPlan: trainingPlanFilter,
         },
       },
-      select: { workoutId: true, actualDistanceKm: true, actualDurationSec: true },
+      select: { workoutId: true, actualDistanceKm: true, actualDurationSec: true, rpe: true },
     });
 
     return buildAnalyticsSummary(
-      workouts,
+      workouts.map((w) => ({
+        id: w.id,
+        scheduledDate: w.scheduledDate,
+        distanceTargetKm: w.distanceTargetKm ? Number(w.distanceTargetKm) : null,
+        rpeTarget: w.rpeTarget,
+      })),
       results.map((r) => ({
         workoutId: r.workoutId,
         actualDistanceKm: r.actualDistanceKm ? Number(r.actualDistanceKm) : null,
         actualDurationSec: r.actualDurationSec,
+        rpe: r.rpe,
       })),
       from,
       to,
