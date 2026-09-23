@@ -21,6 +21,7 @@ import { AthleteHomePage } from '@/features/dashboard/AthleteHomePage'
 import { OrganisationsListPage } from '@/features/admin/OrganisationsListPage'
 import { OrganisationDetailPage } from '@/features/admin/OrganisationDetailPage'
 import { MyTeamPage } from '@/features/admin/MyTeamPage'
+import { AuditLogPage } from '@/features/admin/AuditLogPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -44,6 +45,7 @@ export default function App() {
           <Route element={<ProtectedRoute allow={['PLATFORM_ADMIN']} />}>
             <Route path="/admin" element={<OrganisationsListPage />} />
             <Route path="/admin/organisations/:organisationId" element={<OrganisationDetailPage />} />
+            <Route path="/admin/audit-log" element={<AuditLogPage />} />
           </Route>
           <Route element={<ProtectedRoute allow={['COACH', 'PLATFORM_ADMIN']} />}>
             <Route path="/dashboard" element={<CoachDashboardPage />} />

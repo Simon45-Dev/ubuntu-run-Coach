@@ -3,6 +3,7 @@ import {
   Bell,
   Building2,
   ClipboardList,
+  History,
   House,
   LayoutDashboard,
   MessageCircle,
@@ -34,6 +35,12 @@ export function Sidebar() {
           <NavLink to="/admin" className={linkClass}>
             <Building2 className="h-4 w-4" />
             Organisations
+          </NavLink>
+        )}
+        {isAdmin && (
+          <NavLink to="/admin/audit-log" className={linkClass}>
+            <History className="h-4 w-4" />
+            Audit Log
           </NavLink>
         )}
         {isCoach && (

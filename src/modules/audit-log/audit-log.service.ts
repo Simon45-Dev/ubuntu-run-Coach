@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 export interface RecordAuditEntryInput {
   actorUserId?: string | null;
@@ -12,10 +13,7 @@ export interface RecordAuditEntryInput {
   metadata?: Record<string, unknown> | null;
 }
 
-/**
- * Write-only by design - no controller exposes read/update/delete for audit
- * entries in this slice. AuditLog rows are append-only.
- */
+/** AuditLog rows are append-only - findAll is PLATFORM_ADMIN-only, see audit-log.controller.ts. */
 @Injectable()
 export class AuditLogService {
   constructor(private readonly prisma: PrismaService) {}
@@ -32,5 +30,43 @@ export class AuditLogService {
         metadata: (input.metadata as Prisma.InputJsonValue | undefined) ?? undefined,
       },
     });
+  }
+
+  /**
+   * `actorUserId` has no Prisma relation to User (it's a plain nullable
+   * string, since an audit entry must survive a deleted user) - resolved
+   * here with one extra batched query instead of a per-row lookup, so the
+   * UI doesn't have to show raw UUIDs.
+   */
+  async findAll(pagination: PaginationQueryDto) {
+    const { page, pageSize } = pagination;
+    const [items, total] = await Promise.all([
+      this.prisma.auditLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.auditLog.count(),
+    ]);
+
+    const actorIds = [...new Set(items.map((i) => i.actorUserId).filter((id): id is string => !!id))];
+    const actors = actorIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: actorIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : [];
+    const actorById = new Map(actors.map((a) => [a.id, a]));
+
+    return {
+      items: items.map((item) => ({
+        ...item,
+        actorName: item.actorUserId ? (actorById.get(item.actorUserId)?.name ?? null) : null,
+        actorEmail: item.actorUserId ? (actorById.get(item.actorUserId)?.email ?? null) : null,
+      })),
+      total,
+      page,
+      pageSize,
+    };
   }
 }

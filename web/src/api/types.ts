@@ -274,6 +274,20 @@ export interface Paginated<T> {
   pageSize: number
 }
 
+export interface AuditLogEntry {
+  id: string
+  actorUserId: string | null
+  actorName: string | null
+  actorEmail: string | null
+  action: string
+  targetEntityType: string
+  targetEntityId: string
+  ipAddress: string | null
+  userAgent: string | null
+  metadata: Record<string, unknown> | null
+  createdAt: string
+}
+
 export const ALERT_TYPES = [
   'PAIN_INJURY',
   'MISSED_TRAINING',

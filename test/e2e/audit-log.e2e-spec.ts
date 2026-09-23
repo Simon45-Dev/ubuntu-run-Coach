@@ -74,6 +74,39 @@ describe('Audit log (e2e)', () => {
     expect(entries).toHaveLength(0);
   });
 
+  it('PLATFORM_ADMIN can list audit log entries with the actor name resolved', async () => {
+    const coach = await registerCoach(app);
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/users/${coach.userId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'SUSPENDED' })
+      .expect(200);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/audit-logs')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const entry = res.body.items.find(
+      (i: { action: string; targetEntityId: string }) =>
+        i.action === 'USER_STATUS_CHANGED' && i.targetEntityId === coach.userId,
+    );
+    expect(entry).toBeDefined();
+    expect(entry.actorName).toBe('Test Admin');
+    expect(entry.actorEmail).toBe(admin.email);
+  });
+
+  it('a non-admin cannot list audit log entries', async () => {
+    const coach = await registerCoach(app);
+    await request(app.getHttpServer())
+      .get('/api/v1/audit-logs')
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(403);
+  });
+
   it('exposes no route to update or delete an AuditLog row', async () => {
     const admin = await createPlatformAdmin(prisma);
     const adminToken = await loginAs(app, admin.email, admin.password);
