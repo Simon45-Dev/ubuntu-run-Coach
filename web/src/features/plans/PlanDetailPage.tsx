@@ -25,6 +25,7 @@ import { formatDate } from '@/lib/format'
 import { WorkoutDialog } from './WorkoutDialog'
 import { WorkoutDetailDialog } from './WorkoutDetailDialog'
 import { ImportWorkoutsCsvDialog } from './ImportWorkoutsCsvDialog'
+import { AthletePlanWeekView } from './AthletePlanWeekView'
 import { WORKOUT_TYPE_STYLES } from './workoutTypeStyles'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
@@ -128,60 +129,64 @@ export function PlanDetailPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-navy/10 bg-white p-4">
-        <Calendar
-          localizer={calendarLocalizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          views={['month']}
-          defaultView="month"
-          style={{ height: 600 }}
-          selectable={canManage}
-          onSelectSlot={(slot: SlotInfo) => canManage && setCreateDate(slot.start)}
-          onSelectEvent={(event) => setViewingWorkout(event.resource as Workout)}
-          eventPropGetter={(event) => {
-            const style = WORKOUT_TYPE_STYLES[(event.resource as Workout).type]
-            return { style: { backgroundColor: style.bg, color: style.text, borderRadius: 4, border: 'none' } }
-          }}
-        />
-      </div>
+      {canManage ? (
+        <>
+          <div className="rounded-lg border border-navy/10 bg-white p-4">
+            <Calendar
+              localizer={calendarLocalizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              views={['month']}
+              defaultView="month"
+              style={{ height: 600 }}
+              selectable={canManage}
+              onSelectSlot={(slot: SlotInfo) => canManage && setCreateDate(slot.start)}
+              onSelectEvent={(event) => setViewingWorkout(event.resource as Workout)}
+              eventPropGetter={(event) => {
+                const style = WORKOUT_TYPE_STYLES[(event.resource as Workout).type]
+                return { style: { backgroundColor: style.bg, color: style.text, borderRadius: 4, border: 'none' } }
+              }}
+            />
+          </div>
 
-      {canManage && (
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setCreateDate(new Date())}>
-            Add workout
-          </Button>
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
-            Import CSV
-          </Button>
-        </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setCreateDate(new Date())}>
+              Add workout
+            </Button>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
+          </div>
+
+          <WorkoutDialog
+            trainingPlanId={planId!}
+            open={!!createDate}
+            defaultDate={createDate ?? undefined}
+            onOpenChange={(open) => !open && setCreateDate(null)}
+          />
+          <WorkoutDialog
+            trainingPlanId={planId!}
+            workout={editingWorkout ?? undefined}
+            open={!!editingWorkout}
+            onOpenChange={(open) => !open && setEditingWorkout(null)}
+          />
+          <WorkoutDetailDialog
+            trainingPlanId={planId!}
+            workout={viewingWorkout}
+            canManage={canManage}
+            open={!!viewingWorkout}
+            onOpenChange={(open) => !open && setViewingWorkout(null)}
+            onEdit={() => {
+              setEditingWorkout(viewingWorkout)
+              setViewingWorkout(null)
+            }}
+          />
+          <ImportWorkoutsCsvDialog trainingPlanId={planId!} open={importOpen} onOpenChange={setImportOpen} />
+        </>
+      ) : (
+        <AthletePlanWeekView trainingPlanId={planId!} workouts={workouts ?? []} />
       )}
-
-      <WorkoutDialog
-        trainingPlanId={planId!}
-        open={!!createDate}
-        defaultDate={createDate ?? undefined}
-        onOpenChange={(open) => !open && setCreateDate(null)}
-      />
-      <WorkoutDialog
-        trainingPlanId={planId!}
-        workout={editingWorkout ?? undefined}
-        open={!!editingWorkout}
-        onOpenChange={(open) => !open && setEditingWorkout(null)}
-      />
-      <WorkoutDetailDialog
-        trainingPlanId={planId!}
-        workout={viewingWorkout}
-        canManage={canManage}
-        open={!!viewingWorkout}
-        onOpenChange={(open) => !open && setViewingWorkout(null)}
-        onEdit={() => {
-          setEditingWorkout(viewingWorkout)
-          setViewingWorkout(null)
-        }}
-      />
-      <ImportWorkoutsCsvDialog trainingPlanId={planId!} open={importOpen} onOpenChange={setImportOpen} />
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>
