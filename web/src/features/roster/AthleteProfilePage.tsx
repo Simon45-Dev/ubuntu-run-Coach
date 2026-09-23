@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/dialog'
 import { PlansTab } from '@/features/plans/PlansTab'
 import { CheckInsTab } from '@/features/check-ins/CheckInsTab'
+import { RaceGoalsTab } from '@/features/race-goals/RaceGoalsTab'
+import { CoachNotesTab } from '@/features/coach-notes/CoachNotesTab'
 import { InviteLinkDialog } from './InviteLinkDialog'
 
 export function AthleteProfilePage() {
@@ -121,6 +123,8 @@ export function AthleteProfilePage() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="plans">Training Plans</TabsTrigger>
           <TabsTrigger value="check-ins">Check-ins</TabsTrigger>
+          <TabsTrigger value="race-goals">Race Goals</TabsTrigger>
+          {canManage && <TabsTrigger value="notes">Notes</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="profile">
@@ -180,6 +184,16 @@ export function AthleteProfilePage() {
         <TabsContent value="check-ins">
           <CheckInsTab athleteId={athlete.id} isSelf={isSelf} />
         </TabsContent>
+
+        <TabsContent value="race-goals">
+          <RaceGoalsTab athleteId={athlete.id} />
+        </TabsContent>
+
+        {canManage && (
+          <TabsContent value="notes">
+            <CoachNotesTab athleteId={athlete.id} />
+          </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>

@@ -11,6 +11,9 @@ export type UserStatus = (typeof USER_STATUSES)[number]
 export const CONSENT_TYPES = ['HEALTH_CHECKIN_DATA', 'TERMS_OF_SERVICE'] as const
 export type ConsentType = (typeof CONSENT_TYPES)[number]
 
+export const RACE_GOAL_STATUSES = ['PLANNED', 'COMPLETED', 'DNF', 'CANCELLED'] as const
+export type RaceGoalStatus = (typeof RACE_GOAL_STATUSES)[number]
+
 export const TRAINING_PLAN_PHASES = ['BASE', 'BUILD', 'PEAK', 'TAPER', 'RECOVERY'] as const
 export type TrainingPlanPhase = (typeof TRAINING_PLAN_PHASES)[number]
 
@@ -153,6 +156,28 @@ export interface CheckIn {
   motivation: number | null
   pain: string | null
   consentId: string
+}
+
+export interface RaceGoal {
+  id: string
+  athleteId: string
+  raceName: string
+  raceDate: string
+  distance: string
+  targetTimeSeconds: number | null
+  status: RaceGoalStatus
+  actualTimeSeconds: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CoachNote {
+  id: string
+  athleteId: string
+  coachId: string
+  content: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Workout {
