@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
-import { createPlatformAdmin, loginAs, registerCoach } from './utils/fixtures';
+import { createAthleteForCoach, createPlatformAdmin, loginAs, registerCoach } from './utils/fixtures';
 
 describe('Coach onboarding via invite (e2e)', () => {
   let app: INestApplication;
@@ -159,8 +159,9 @@ describe('Coach onboarding via invite (e2e)', () => {
       .expect(400);
   });
 
-  it('a non-admin cannot resend a coach invite', async () => {
+  it('a coach from a different organisation cannot resend a coach invite', async () => {
     const org = await registerCoach(app);
+    const otherOrg = await registerCoach(app);
     const token = await adminToken();
     const email = `invitee-${Date.now()}@example.test`;
     const inviteRes = await request(app.getHttpServer())
@@ -171,7 +172,65 @@ describe('Coach onboarding via invite (e2e)', () => {
 
     await request(app.getHttpServer())
       .post(`/api/v1/coaches/${inviteRes.body.id}/resend-invite`)
-      .set('Authorization', `Bearer ${org.accessToken}`)
+      .set('Authorization', `Bearer ${otherOrg.accessToken}`)
+      .expect(404);
+  });
+
+  it('an athlete cannot invite or resend-invite a coach', async () => {
+    const org = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, org.accessToken, org.coachId);
+    const athleteToken = await loginAs(app, athlete.email, athlete.password);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${org.organisationId}/coaches`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .send({ email: `invitee-${Date.now()}@example.test`, name: 'Invited Coach' })
       .expect(403);
+  });
+
+  it('a coach can invite a second coach into their own organisation', async () => {
+    const org = await registerCoach(app);
+    const email = `invitee-${Date.now()}@example.test`;
+
+    const inviteRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${org.organisationId}/coaches`)
+      .set('Authorization', `Bearer ${org.accessToken}`)
+      .send({ email, name: 'Second Coach' })
+      .expect(201);
+    expect(typeof inviteRes.body.inviteToken).toBe('string');
+
+    const acceptRes = await request(app.getHttpServer())
+      .post('/api/v1/auth/accept-invite')
+      .send({ token: inviteRes.body.inviteToken, password: 'AcceptedPassword123!' })
+      .expect(200);
+    expect(typeof acceptRes.body.accessToken).toBe('string');
+  });
+
+  it('a coach cannot invite a coach into another organisation', async () => {
+    const org = await registerCoach(app);
+    const otherOrg = await registerCoach(app);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${otherOrg.organisationId}/coaches`)
+      .set('Authorization', `Bearer ${org.accessToken}`)
+      .send({ email: `invitee-${Date.now()}@example.test`, name: 'Should Not Work' })
+      .expect(403);
+  });
+
+  it('a coach can resend an invite within their own organisation', async () => {
+    const org = await registerCoach(app);
+    const email = `invitee-${Date.now()}@example.test`;
+    const inviteRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${org.organisationId}/coaches`)
+      .set('Authorization', `Bearer ${org.accessToken}`)
+      .send({ email, name: 'Second Coach' })
+      .expect(201);
+    const oldToken = inviteRes.body.inviteToken as string;
+
+    const resendRes = await request(app.getHttpServer())
+      .post(`/api/v1/coaches/${inviteRes.body.id}/resend-invite`)
+      .set('Authorization', `Bearer ${org.accessToken}`)
+      .expect(201);
+    expect(resendRes.body.inviteToken).not.toBe(oldToken);
   });
 });

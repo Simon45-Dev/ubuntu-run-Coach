@@ -72,6 +72,12 @@ export function Sidebar() {
             Templates
           </NavLink>
         )}
+        {isCoach && (
+          <NavLink to="/team" className={linkClass}>
+            <Building2 className="h-4 w-4" />
+            My Team
+          </NavLink>
+        )}
         {isAthlete && ctx.athleteId && (
           <NavLink to={`/athletes/${ctx.athleteId}`} className={linkClass}>
             <Users className="h-4 w-4" />

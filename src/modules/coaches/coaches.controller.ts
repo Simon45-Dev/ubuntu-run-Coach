@@ -20,17 +20,29 @@ import { Role } from '../../common/enums/role.enum';
 export class CoachesController {
   constructor(private readonly coachesService: CoachesService) {}
 
+  /**
+   * COACH or PLATFORM_ADMIN. The @ScopeResource('organisation', ...) guard
+   * already restricts a COACH caller's :organisationId to their own JWT
+   * claim (org-scope.guard.ts's 'organisation' case), so a coach can only
+   * ever invite into their own organisation - no extra check needed here.
+   */
   @Post('organisations/:organisationId/coaches')
-  @Roles(Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
   @ScopeResource('organisation', 'organisationId')
   invite(@Param('organisationId') organisationId: string, @Body() dto: InviteCoachDto) {
     return this.coachesService.invite(organisationId, dto);
   }
 
+  /**
+   * COACH or PLATFORM_ADMIN. No :organisationId param on this route to
+   * scope against, so the org-membership check happens in the service
+   * layer instead (CoachesService.resendInvite), matching how
+   * CoachesService.findOne/update already do it.
+   */
   @Post('coaches/:id/resend-invite')
-  @Roles(Role.PLATFORM_ADMIN)
-  resendInvite(@Param('id') id: string) {
-    return this.coachesService.resendInvite(id);
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  resendInvite(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
+    return this.coachesService.resendInvite(ctx, id);
   }
 
   @Get('organisations/:organisationId/coaches')

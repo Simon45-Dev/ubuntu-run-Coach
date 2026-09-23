@@ -22,10 +22,12 @@ export class CoachesService {
   ) {}
 
   /**
-   * PLATFORM_ADMIN only. Mirrors AthletesService.invite: no password is
-   * chosen here - the account starts INVITED with a placeholder password
-   * and a one-time token, both emailed (EmailService) and returned directly
-   * to the inviting admin, since the same POST /auth/accept-invite endpoint
+   * COACH (own organisation only, enforced by the controller's
+   * @ScopeResource('organisation', ...) guard) or PLATFORM_ADMIN (any
+   * organisation). Mirrors AthletesService.invite: no password is chosen
+   * here - the account starts INVITED with a placeholder password and a
+   * one-time token, both emailed (EmailService) and returned directly to
+   * the inviter, since the same POST /auth/accept-invite endpoint
    * activates any invited user regardless of role.
    */
   async invite(organisationId: string, dto: InviteCoachDto) {
@@ -71,13 +73,21 @@ export class CoachesService {
     return { ...coach, inviteToken: rawToken, inviteTokenExpiresAt: expiresAt };
   }
 
-  /** Regenerates the invite token for a coach who hasn't accepted yet. PLATFORM_ADMIN only. */
-  async resendInvite(id: string) {
+  /**
+   * Regenerates the invite token for a coach who hasn't accepted yet.
+   * COACH or PLATFORM_ADMIN - a coach may only resend within their own
+   * organisation (404, not 403, matching findOne's existence-hiding
+   * convention for an out-of-scope id).
+   */
+  async resendInvite(ctx: AuthContext, id: string) {
     const coach = await this.prisma.coach.findFirst({
       where: { id, deletedAt: null },
       include: COACH_INCLUDE,
     });
     if (!coach) {
+      throw new NotFoundException('Coach not found');
+    }
+    if (ctx.role === Role.COACH && ctx.organisationId !== coach.organisationId) {
       throw new NotFoundException('Coach not found');
     }
     if (coach.user.status !== UserStatus.INVITED) {

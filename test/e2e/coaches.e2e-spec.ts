@@ -69,13 +69,4 @@ describe('Coaches (e2e)', () => {
       expect.arrayContaining([coach.coachId, res.body.id]),
     );
   });
-
-  it('a non-admin cannot invite a coach', async () => {
-    const coach = await registerCoach(app);
-    await request(app.getHttpServer())
-      .post(`/api/v1/organisations/${coach.organisationId}/coaches`)
-      .set('Authorization', `Bearer ${coach.accessToken}`)
-      .send({ email: 'x@example.test', name: 'X' })
-      .expect(403);
-  });
 });

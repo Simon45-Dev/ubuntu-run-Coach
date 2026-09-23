@@ -20,6 +20,7 @@ import { CoachDashboardPage } from '@/features/dashboard/CoachDashboardPage'
 import { AthleteHomePage } from '@/features/dashboard/AthleteHomePage'
 import { OrganisationsListPage } from '@/features/admin/OrganisationsListPage'
 import { OrganisationDetailPage } from '@/features/admin/OrganisationDetailPage'
+import { MyTeamPage } from '@/features/admin/MyTeamPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -53,6 +54,9 @@ export default function App() {
             <Route path="/groups/:groupId/plans/:planId" element={<PlanDetailPage />} />
             <Route path="/templates" element={<TemplatesListPage />} />
             <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allow={['COACH']} />}>
+            <Route path="/team" element={<MyTeamPage />} />
           </Route>
           <Route element={<ProtectedRoute allow={['ATHLETE']} />}>
             <Route path="/home" element={<AthleteHomePage />} />

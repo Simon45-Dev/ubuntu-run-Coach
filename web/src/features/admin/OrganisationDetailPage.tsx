@@ -22,15 +22,30 @@ const statusVariant = {
   DEACTIVATED: 'inactive',
 } as const
 
+/**
+ * A COACH (not PLATFORM_ADMIN) can only list their own roster - GET
+ * /coaches/:coachId/athletes 403s for a peer coach's id (OrgScopeGuard's
+ * 'coach' case). This page is also used as "My Team" by a coach viewing
+ * their own organisation's coaches, which may include peers - so a failed
+ * lookup is swallowed rather than breaking the whole page; that coach's
+ * count just shows as unavailable.
+ */
 async function loadAthleteCounts(coaches: Coach[]): Promise<Record<string, number>> {
   const counts = await Promise.all(
-    coaches.map(async (coach) => [coach.id, (await listRoster(coach.id)).length] as const),
+    coaches.map(async (coach): Promise<readonly [string, number | null]> => {
+      try {
+        return [coach.id, (await listRoster(coach.id)).length]
+      } catch {
+        return [coach.id, null]
+      }
+    }),
   )
-  return Object.fromEntries(counts)
+  return Object.fromEntries(counts.filter((c): c is readonly [string, number] => c[1] !== null))
 }
 
-export function OrganisationDetailPage() {
-  const { organisationId } = useParams<{ organisationId: string }>()
+export function OrganisationDetailPage({ organisationId: organisationIdProp }: { organisationId?: string } = {}) {
+  const params = useParams<{ organisationId: string }>()
+  const organisationId = organisationIdProp ?? params.organisationId
   const [inviteOpen, setInviteOpen] = useState(false)
 
   const { data: organisation, isLoading: orgLoading } = useQuery({
