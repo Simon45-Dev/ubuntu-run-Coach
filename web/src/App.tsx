@@ -14,12 +14,14 @@ import { GroupsListPage } from '@/features/groups/GroupsListPage'
 import { GroupDetailPage } from '@/features/groups/GroupDetailPage'
 import { TemplatesListPage } from '@/features/templates/TemplatesListPage'
 import { TemplateDetailPage } from '@/features/templates/TemplateDetailPage'
+import { CoachDashboardPage } from '@/features/dashboard/CoachDashboardPage'
+import { AthleteHomePage } from '@/features/dashboard/AthleteHomePage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
-  if (ctx?.role === 'COACH') return <Navigate to="/action-centre" replace />
+  if (ctx?.role === 'COACH') return <Navigate to="/dashboard" replace />
   if (ctx?.role === 'ATHLETE' && ctx.athleteId) {
-    return <Navigate to={`/athletes/${ctx.athleteId}`} replace />
+    return <Navigate to="/home" replace />
   }
   return <Navigate to="/admin" replace />
 }
@@ -46,6 +48,7 @@ export default function App() {
           <Route path="/" element={<RootRedirect />} />
           <Route path="/admin" element={<AdminPlaceholderPage />} />
           <Route element={<ProtectedRoute allow={['COACH', 'PLATFORM_ADMIN']} />}>
+            <Route path="/dashboard" element={<CoachDashboardPage />} />
             <Route path="/action-centre" element={<ActionCentrePage />} />
             <Route path="/roster" element={<RosterListPage />} />
             <Route path="/groups" element={<GroupsListPage />} />
@@ -53,6 +56,9 @@ export default function App() {
             <Route path="/groups/:groupId/plans/:planId" element={<PlanDetailPage />} />
             <Route path="/templates" element={<TemplatesListPage />} />
             <Route path="/templates/:templateId" element={<TemplateDetailPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allow={['ATHLETE']} />}>
+            <Route path="/home" element={<AthleteHomePage />} />
           </Route>
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />

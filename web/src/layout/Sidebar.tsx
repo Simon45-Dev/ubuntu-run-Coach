@@ -1,12 +1,22 @@
 import { NavLink } from 'react-router-dom'
-import { Bell, ClipboardList, LogOut, MessageCircle, Siren, Users, UsersRound } from 'lucide-react'
+import {
+  Bell,
+  ClipboardList,
+  House,
+  LayoutDashboard,
+  MessageCircle,
+  Siren,
+  Users,
+  UsersRound,
+} from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import logo from '@/assets/logo.png'
 import { cn } from '@/lib/utils'
 
 export function Sidebar() {
-  const { ctx, logout } = useAuth()
+  const { ctx } = useAuth()
   const isCoach = ctx?.role === 'COACH'
+  const isAthlete = ctx?.role === 'ATHLETE'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -15,9 +25,21 @@ export function Sidebar() {
     )
 
   return (
-    <aside className="flex h-screen w-60 flex-col bg-navy px-3 py-4">
+    <aside className="flex h-screen w-60 flex-col bg-forest px-3 py-4">
       <img src={logo} alt="Ubuntu Run" className="mb-6 h-auto w-full px-2" />
       <nav className="flex flex-1 flex-col gap-1">
+        {isCoach && (
+          <NavLink to="/dashboard" className={linkClass}>
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </NavLink>
+        )}
+        {isAthlete && (
+          <NavLink to="/home" className={linkClass}>
+            <House className="h-4 w-4" />
+            Home
+          </NavLink>
+        )}
         {isCoach && (
           <NavLink to="/action-centre" className={linkClass}>
             <Siren className="h-4 w-4" />
@@ -42,32 +64,25 @@ export function Sidebar() {
             Templates
           </NavLink>
         )}
-        {ctx?.role === 'ATHLETE' && ctx.athleteId && (
+        {isAthlete && ctx.athleteId && (
           <NavLink to={`/athletes/${ctx.athleteId}`} className={linkClass}>
             <Users className="h-4 w-4" />
             My Training
           </NavLink>
         )}
-        {(isCoach || ctx?.role === 'ATHLETE') && (
+        {(isCoach || isAthlete) && (
           <NavLink to="/messages" className={linkClass}>
             <MessageCircle className="h-4 w-4" />
             Messages
           </NavLink>
         )}
-        {(isCoach || ctx?.role === 'ATHLETE') && (
+        {(isCoach || isAthlete) && (
           <NavLink to="/notifications" className={linkClass}>
             <Bell className="h-4 w-4" />
             Notifications
           </NavLink>
         )}
       </nav>
-      <button
-        onClick={() => void logout()}
-        className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-      >
-        <LogOut className="h-4 w-4" />
-        Log out
-      </button>
     </aside>
   )
 }

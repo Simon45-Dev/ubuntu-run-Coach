@@ -47,9 +47,11 @@ export interface SubmitWorkoutResultInput {
   completedAt?: string
 }
 
-export async function getWorkoutResult(workoutId: string): Promise<WorkoutResult | null> {
+export async function getWorkoutResult(workoutId: string, athleteId?: string): Promise<WorkoutResult | null> {
   try {
-    const res = await apiClient.get<WorkoutResult>(`/workouts/${workoutId}/result`)
+    const res = await apiClient.get<WorkoutResult>(`/workouts/${workoutId}/result`, {
+      params: athleteId ? { athleteId } : undefined,
+    })
     return res.data
   } catch (err: unknown) {
     if (isNotFound(err)) return null

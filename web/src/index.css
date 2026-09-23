@@ -12,6 +12,10 @@
   --color-mist: #f4f7f8;
   --color-white: #ffffff;
 
+  /* Brand Guidelines v1.2 - sidebar background (was Navy); Green remains the
+     accent/button colour used for active nav pills and primary buttons. */
+  --color-forest: #0e3b28;
+
   /* Status system - Section 18. Colour is always paired with text/icon, never used alone. */
   --color-status-good: var(--color-green);
   --color-status-watch: var(--color-orange);
@@ -26,6 +30,7 @@
   --color-green: var(--color-green);
   --color-orange: var(--color-orange);
   --color-mist: var(--color-mist);
+  --color-forest: var(--color-forest);
 
   --color-status-good: var(--color-status-good);
   --color-status-watch: var(--color-status-watch);
