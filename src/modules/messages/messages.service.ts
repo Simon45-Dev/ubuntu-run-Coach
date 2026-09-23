@@ -9,16 +9,26 @@ import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class MessagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async send(ctx: AuthContext, receiverId: string, dto: SendMessageDto) {
     await this.assertValidCounterpart(ctx, receiverId);
-    return this.prisma.message.create({
+    const message = await this.prisma.message.create({
       data: { senderId: ctx.userId, receiverId, content: dto.content },
     });
+    await this.notificationsService.create({
+      recipientId: receiverId,
+      type: 'MESSAGE_RECEIVED',
+      payload: { messageId: message.id, senderId: ctx.userId },
+    });
+    return message;
   }
 
   async findThread(ctx: AuthContext, counterpartId: string, pagination: PaginationQueryDto) {

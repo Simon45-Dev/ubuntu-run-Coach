@@ -18,6 +18,7 @@ import { CoachNotesModule } from './modules/coach-notes/coach-notes.module';
 import { TrainingPlansModule } from './modules/training-plans/training-plans.module';
 import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { MessagesModule } from './modules/messages/messages.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ConsentsModule } from './modules/consents/consents.module';
 import { CheckInsModule } from './modules/check-ins/check-ins.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
@@ -40,6 +41,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     TrainingPlansModule,
     WorkoutsModule,
     MessagesModule,
+    NotificationsModule,
     ConsentsModule,
     CheckInsModule,
   ],
