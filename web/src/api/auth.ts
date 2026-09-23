@@ -14,6 +14,11 @@ export interface RegisterInput {
   organisationName: string
 }
 
+export interface AcceptInviteInput {
+  token: string
+  password: string
+}
+
 export async function login(input: LoginInput): Promise<{ accessToken: string }> {
   const res = await apiClient.post<{ accessToken: string }>('/auth/login', input)
   return res.data
@@ -21,6 +26,11 @@ export async function login(input: LoginInput): Promise<{ accessToken: string }>
 
 export async function register(input: RegisterInput): Promise<{ accessToken: string }> {
   const res = await apiClient.post<{ accessToken: string }>('/auth/register', input)
+  return res.data
+}
+
+export async function acceptInvite(input: AcceptInviteInput): Promise<{ accessToken: string }> {
+  const res = await apiClient.post<{ accessToken: string }>('/auth/accept-invite', input)
   return res.data
 }
 

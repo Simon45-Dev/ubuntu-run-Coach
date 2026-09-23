@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
-import { createAthlete } from '@/api/athletes'
+import { inviteAthlete } from '@/api/athletes'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,12 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { InviteLinkDialog } from './InviteLinkDialog'
 
-// Mirrors backend CreateAthleteDto constraints.
+// Mirrors backend InviteAthleteDto constraints.
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Enter a valid email'),
-  password: z.string().min(10, 'Password must be at least 10 characters'),
   goal: z.string().optional(),
 })
 
@@ -37,6 +38,7 @@ export function CreateAthleteDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const queryClient = useQueryClient()
+  const [invite, setInvite] = useState<{ token: string; expiresAt: string } | null>(null)
   const {
     register,
     handleSubmit,
@@ -46,59 +48,72 @@ export function CreateAthleteDialog({
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      createAthlete(coachId, { ...values, goal: values.goal || undefined }),
-    onSuccess: () => {
-      toast.success('Athlete added')
+      inviteAthlete(coachId, { ...values, goal: values.goal || undefined }),
+    onSuccess: (result) => {
+      toast.success('Invite created')
       void queryClient.invalidateQueries({ queryKey: ['roster', coachId] })
+      setInvite({ token: result.inviteToken, expiresAt: result.inviteTokenExpiresAt })
       reset()
       onOpenChange(false)
     },
     onError: (err) => {
       const message =
         err instanceof AxiosError
-          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not add athlete')
-          : 'Could not add athlete'
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not invite athlete')
+          : 'Could not invite athlete'
       toast.error(Array.isArray(message) ? message.join(', ') : message)
     },
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add an athlete</DialogTitle>
-          <DialogDescription>They'll be added straight to your roster.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit((values) => mutation.mutate(values))} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-sm text-status-attention">{errors.name.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register('email')} />
-            {errors.email && <p className="text-sm text-status-attention">{errors.email.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Temporary password</Label>
-            <Input id="password" type="password" {...register('password')} />
-            {errors.password && <p className="text-sm text-status-attention">{errors.password.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="goal">Goal (optional)</Label>
-            <Input id="goal" placeholder="e.g. Sub-4 marathon" {...register('goal')} />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Adding...' : 'Add athlete'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite an athlete</DialogTitle>
+            <DialogDescription>
+              They'll be added to your roster once they accept the invite.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            noValidate
+            onSubmit={handleSubmit((values) => mutation.mutate(values))}
+            className="flex flex-col gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" {...register('name')} />
+              {errors.name && <p className="text-sm text-status-attention">{errors.name.message}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" {...register('email')} />
+              {errors.email && <p className="text-sm text-status-attention">{errors.email.message}</p>}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="goal">Goal (optional)</Label>
+              <Input id="goal" placeholder="e.g. Sub-4 marathon" {...register('goal')} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? 'Inviting...' : 'Send invite'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {invite && (
+        <InviteLinkDialog
+          open={!!invite}
+          onOpenChange={(next) => !next && setInvite(null)}
+          inviteToken={invite.token}
+          expiresAt={invite.expiresAt}
+        />
+      )}
+    </>
   )
 }

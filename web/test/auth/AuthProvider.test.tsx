@@ -8,17 +8,19 @@ vi.mock('@/api/auth', () => ({
   fetchMe: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  acceptInvite: vi.fn(),
 }))
 
-import { fetchMe, login, logout, refresh } from '@/api/auth'
+import { acceptInvite, fetchMe, login, logout, refresh } from '@/api/auth'
 
 function Probe() {
-  const { ctx, status, login: doLogin, logout: doLogout } = useAuth()
+  const { ctx, status, login: doLogin, acceptInvite: doAcceptInvite, logout: doLogout } = useAuth()
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="role">{ctx?.role ?? 'none'}</span>
       <button onClick={() => void doLogin({ email: 'a@b.com', password: 'password123' })}>login</button>
+      <button onClick={() => void doAcceptInvite('raw-token', 'newpassword123')}>accept-invite</button>
       <button onClick={() => void doLogout()}>logout</button>
     </div>
   )
@@ -76,5 +78,23 @@ describe('AuthProvider', () => {
 
     await user.click(screen.getByText('logout'))
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'))
+  })
+
+  it('accepts an invite and becomes authenticated', async () => {
+    vi.mocked(refresh).mockResolvedValue({ accessToken: null })
+    vi.mocked(acceptInvite).mockResolvedValue({ accessToken: 'token-789' })
+    vi.mocked(fetchMe).mockResolvedValue({ userId: 'u3', role: 'ATHLETE', athleteId: 'a2' })
+
+    const user = userEvent.setup()
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    )
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'))
+
+    await user.click(screen.getByText('accept-invite'))
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authenticated'))
+    expect(acceptInvite).toHaveBeenCalledWith({ token: 'raw-token', password: 'newpassword123' })
   })
 })

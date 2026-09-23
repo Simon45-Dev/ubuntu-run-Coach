@@ -1,5 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { fetchMe, login as apiLogin, logout as apiLogout, refresh as apiRefresh } from '@/api/auth'
+import {
+  acceptInvite as apiAcceptInvite,
+  fetchMe,
+  login as apiLogin,
+  logout as apiLogout,
+  refresh as apiRefresh,
+} from '@/api/auth'
 import { getAccessToken, setAccessToken, setOnSessionExpired } from '@/api/client'
 import type { AuthContext as AuthCtxType, Role } from '@/api/types'
 import type { LoginInput } from '@/api/auth'
@@ -8,6 +14,7 @@ interface AuthState {
   ctx: AuthCtxType | null
   status: 'loading' | 'authenticated' | 'unauthenticated'
   login: (input: LoginInput) => Promise<void>
+  acceptInvite: (token: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -61,6 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authenticated')
   }, [])
 
+  const acceptInvite = useCallback(async (token: string, password: string) => {
+    const { accessToken } = await apiAcceptInvite({ token, password })
+    setAccessToken(accessToken)
+    const me = await fetchMe()
+    setCtx(me)
+    setStatus('authenticated')
+  }, [])
+
   const logout = useCallback(async () => {
     try {
       await apiLogout()
@@ -70,7 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession])
 
   return (
-    <AuthContext.Provider value={{ ctx, status, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ ctx, status, login, acceptInvite, logout }}>
+      {children}
+    </AuthContext.Provider>
   )
 }
 

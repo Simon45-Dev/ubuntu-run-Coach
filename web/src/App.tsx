@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { LoginPage } from '@/auth/LoginPage'
+import { AcceptInvitePage } from '@/auth/AcceptInvitePage'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { DashboardLayout } from '@/layout/DashboardLayout'
 import { RosterListPage } from '@/features/roster/RosterListPage'
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<RootRedirect />} />

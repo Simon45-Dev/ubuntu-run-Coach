@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { deleteAthlete, getAthlete, updateAthlete } from '@/api/athletes'
+import { deleteAthlete, getAthlete, resendInvite, updateAthlete } from '@/api/athletes'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Input, Textarea } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { PlansTab } from '@/features/plans/PlansTab'
+import { InviteLinkDialog } from './InviteLinkDialog'
 
 export function AthleteProfilePage() {
   const { athleteId } = useParams<{ athleteId: string }>()
@@ -64,6 +65,22 @@ export function AthleteProfilePage() {
     },
   })
 
+  const [invite, setInvite] = useState<{ token: string; expiresAt: string } | null>(null)
+  const resendInviteMutation = useMutation({
+    mutationFn: () => resendInvite(athleteId!),
+    onSuccess: (result) => {
+      toast.success('Invite resent')
+      setInvite({ token: result.inviteToken, expiresAt: result.inviteTokenExpiresAt })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not resend invite')
+          : 'Could not resend invite'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
   if (isLoading || !athlete) return <FullPageSpinner />
 
   function startEditing() {
@@ -80,9 +97,20 @@ export function AthleteProfilePage() {
           <p className="text-sm text-navy/60">{athlete.user.email}</p>
         </div>
         {canManage && (
-          <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-            Remove athlete
-          </Button>
+          <div className="flex gap-2">
+            {athlete.user.status === 'INVITED' && (
+              <Button
+                variant="outline"
+                onClick={() => resendInviteMutation.mutate()}
+                disabled={resendInviteMutation.isPending}
+              >
+                {resendInviteMutation.isPending ? 'Resending...' : 'Resend invite'}
+              </Button>
+            )}
+            <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
+              Remove athlete
+            </Button>
+          </div>
         )}
       </div>
 
@@ -165,6 +193,15 @@ export function AthleteProfilePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {invite && (
+        <InviteLinkDialog
+          open={!!invite}
+          onOpenChange={(next) => !next && setInvite(null)}
+          inviteToken={invite.token}
+          expiresAt={invite.expiresAt}
+        />
+      )}
     </div>
   )
 }

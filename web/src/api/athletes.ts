@@ -11,16 +11,30 @@ export async function getAthlete(id: string): Promise<Athlete> {
   return res.data
 }
 
-export interface CreateAthleteInput {
+export interface InviteAthleteInput {
   email: string
-  password: string
   name: string
   goal?: string
   availability?: Record<string, unknown>
 }
 
-export async function createAthlete(coachId: string, input: CreateAthleteInput): Promise<Athlete> {
-  const res = await apiClient.post<Athlete>(`/coaches/${coachId}/athletes`, input)
+export interface InviteResult extends Athlete {
+  inviteToken: string
+  inviteTokenExpiresAt: string
+}
+
+export async function inviteAthlete(coachId: string, input: InviteAthleteInput): Promise<InviteResult> {
+  const res = await apiClient.post<InviteResult>(`/coaches/${coachId}/athletes`, input)
+  return res.data
+}
+
+export interface ResendInviteResult {
+  inviteToken: string
+  inviteTokenExpiresAt: string
+}
+
+export async function resendInvite(athleteId: string): Promise<ResendInviteResult> {
+  const res = await apiClient.post<ResendInviteResult>(`/athletes/${athleteId}/resend-invite`)
   return res.data
 }
 
