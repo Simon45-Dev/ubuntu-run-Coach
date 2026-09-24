@@ -49,7 +49,7 @@ export class UsersController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 2_000_000 },
+      limits: { fileSize: 5_000_000 },
       fileFilter: (_req, file, cb) => {
         if (EXT_BY_MIME[file.mimetype]) {
           cb(null, true);

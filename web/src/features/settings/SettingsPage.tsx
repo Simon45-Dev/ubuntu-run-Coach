@@ -19,7 +19,7 @@ const codeSchema = z.object({ code: z.string().length(6, 'Enter the 6-digit code
 type CodeForm = z.infer<typeof codeSchema>
 
 const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const AVATAR_MAX_BYTES = 2_000_000
+const AVATAR_MAX_BYTES = 5_000_000
 
 function errorMessage(err: unknown, fallback: string): string {
   const message =
@@ -61,7 +61,7 @@ export function SettingsPage() {
       return
     }
     if (file && file.size > AVATAR_MAX_BYTES) {
-      toast.error('Image must be smaller than 2MB')
+      toast.error('Image must be smaller than 5MB')
       return
     }
     setAvatarFile(file)
