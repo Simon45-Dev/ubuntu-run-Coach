@@ -22,5 +22,9 @@ export function formatDistance(km?: number | string | null): string {
 }
 
 export function resolveAvatarUrl(avatarUrl: string | null | undefined): string | undefined {
-  return avatarUrl ? `${assetBaseUrl}${avatarUrl}` : undefined
+  if (!avatarUrl) return undefined
+  // Already absolute (e.g. a Cloudflare R2 public URL) - use as-is, don't
+  // prefix with the API origin. Only today's local-disk /uploads/... paths
+  // are relative and need that prefix.
+  return /^https?:\/\//.test(avatarUrl) ? avatarUrl : `${assetBaseUrl}${avatarUrl}`
 }

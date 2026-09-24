@@ -1,5 +1,3 @@
-import { basename, join } from 'path';
-import { unlink } from 'fs/promises';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
@@ -8,6 +6,7 @@ import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { AvatarStorageService } from './avatar-storage.service';
 
 const PUBLIC_USER_SELECT = {
   id: true,
@@ -20,22 +19,12 @@ const PUBLIC_USER_SELECT = {
   createdAt: true,
 } as const;
 
-function avatarUrlToPath(avatarUrl: string): string {
-  return join(process.cwd(), 'uploads', 'avatars', basename(avatarUrl));
-}
-
-async function deleteAvatarFile(avatarUrl: string | null): Promise<void> {
-  if (!avatarUrl) return;
-  try {
-    await unlink(avatarUrlToPath(avatarUrl));
-  } catch {
-    // Best-effort cleanup - a missing file is not an error the caller needs to see.
-  }
-}
-
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly avatarStorage: AvatarStorageService,
+  ) {}
 
   async findMe(ctx: AuthContext) {
     return this.prisma.user.findUniqueOrThrow({
@@ -52,15 +41,16 @@ export class UsersService {
     });
   }
 
-  async uploadAvatar(ctx: AuthContext, filename: string) {
+  async uploadAvatar(ctx: AuthContext, buffer: Buffer, mimeType: string) {
     const existing = await this.prisma.user.findUniqueOrThrow({
       where: { id: ctx.userId },
       select: { avatarUrl: true },
     });
-    await deleteAvatarFile(existing.avatarUrl);
+    await this.avatarStorage.delete(existing.avatarUrl);
+    const avatarUrl = await this.avatarStorage.save(buffer, mimeType);
     return this.prisma.user.update({
       where: { id: ctx.userId },
-      data: { avatarUrl: `/uploads/avatars/${filename}` },
+      data: { avatarUrl },
       select: PUBLIC_USER_SELECT,
     });
   }
@@ -70,7 +60,7 @@ export class UsersService {
       where: { id: ctx.userId },
       select: { avatarUrl: true },
     });
-    await deleteAvatarFile(existing.avatarUrl);
+    await this.avatarStorage.delete(existing.avatarUrl);
     return this.prisma.user.update({
       where: { id: ctx.userId },
       data: { avatarUrl: null },

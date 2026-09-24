@@ -17,4 +17,11 @@ export default () => ({
     smtpPass: process.env.SMTP_PASS,
     fromAddress: process.env.EMAIL_FROM_ADDRESS ?? 'no-reply@ubunturun.dev',
   },
+  storage: {
+    r2AccountId: process.env.R2_ACCOUNT_ID,
+    r2AccessKeyId: process.env.R2_ACCESS_KEY_ID,
+    r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    r2Bucket: process.env.R2_BUCKET,
+    r2PublicUrl: process.env.R2_PUBLIC_URL,
+  },
 });

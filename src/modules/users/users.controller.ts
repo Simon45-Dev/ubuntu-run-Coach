@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   Body,
@@ -16,8 +15,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { diskStorage } from 'multer';
 import { UsersService } from './users.service';
+import { EXT_BY_MIME } from './avatar-storage.service';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
@@ -28,12 +27,6 @@ import { Audit } from '../../common/decorators/audit.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
-
-const EXT_BY_MIME: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-};
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -56,10 +49,6 @@ export class UsersController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: 'uploads/avatars',
-        filename: (_req, file, cb) => cb(null, `${randomUUID()}${EXT_BY_MIME[file.mimetype]}`),
-      }),
       limits: { fileSize: 2_000_000 },
       fileFilter: (_req, file, cb) => {
         if (EXT_BY_MIME[file.mimetype]) {
@@ -74,7 +63,7 @@ export class UsersController {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    return this.usersService.uploadAvatar(ctx, file.filename);
+    return this.usersService.uploadAvatar(ctx, file.buffer, file.mimetype);
   }
 
   @Delete('me/avatar')

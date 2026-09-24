@@ -124,10 +124,14 @@ export class AuthController {
   }
 
   private setRefreshCookie(res: Response, token: string) {
+    const isProduction = this.configService.get<string>('nodeEnv', { infer: true }) === 'production';
     res.cookie(REFRESH_COOKIE, token, {
       httpOnly: true,
-      secure: this.configService.get<string>('nodeEnv', { infer: true }) === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      // Frontend and backend are expected to live on different domains in
+      // production (e.g. Vercel + Render) - SameSite=None is required for
+      // the cookie to survive that, and requires Secure=true, which we have.
+      sameSite: isProduction ? 'none' : 'strict',
       path: '/api/v1/auth',
     });
   }
