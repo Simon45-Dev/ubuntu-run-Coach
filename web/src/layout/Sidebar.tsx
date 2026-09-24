@@ -34,7 +34,13 @@ export function Sidebar() {
       <img src={logo} alt="Ubuntu Run" className="mb-6 h-auto w-full px-2" />
       <nav className="flex flex-1 flex-col gap-1">
         {isAdmin && (
-          <NavLink to="/admin" className={linkClass}>
+          <NavLink to="/admin" end className={linkClass}>
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </NavLink>
+        )}
+        {isAdmin && (
+          <NavLink to="/admin/organisations" className={linkClass}>
             <Building2 className="h-4 w-4" />
             Organisations
           </NavLink>

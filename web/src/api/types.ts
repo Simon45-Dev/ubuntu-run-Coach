@@ -327,3 +327,20 @@ export interface ActionCentreAlert {
   detectedAt: string
   payload?: Record<string, unknown>
 }
+
+export interface WeeklySignupEntry {
+  weekStart: string
+  users: number
+  organisations: number
+}
+
+export interface PlatformStats {
+  totals: {
+    organisations: number
+    coaches: number
+    athletes: number
+    usersByStatus: Record<UserStatus, number>
+  }
+  weeklySignups: WeeklySignupEntry[]
+  recentOrganisations: { id: string; name: string; type: OrganisationType; createdAt: string }[]
+}

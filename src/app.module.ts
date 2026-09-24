@@ -25,6 +25,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ConsentsModule } from './modules/consents/consents.module';
 import { CheckInsModule } from './modules/check-ins/check-ins.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { PlatformStatsModule } from './modules/platform-stats/platform-stats.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AuditLogModule } from './modules/audit-log/audit-log.module';
     AuthModule,
     UsersModule,
     OrganisationsModule,
+    PlatformStatsModule,
     CoachesModule,
     AthletesModule,
     GroupsModule,

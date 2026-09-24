@@ -18,6 +18,7 @@ import { TemplatesListPage } from '@/features/templates/TemplatesListPage'
 import { TemplateDetailPage } from '@/features/templates/TemplateDetailPage'
 import { CoachDashboardPage } from '@/features/dashboard/CoachDashboardPage'
 import { AthleteHomePage } from '@/features/dashboard/AthleteHomePage'
+import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage'
 import { OrganisationsListPage } from '@/features/admin/OrganisationsListPage'
 import { OrganisationDetailPage } from '@/features/admin/OrganisationDetailPage'
 import { MyTeamPage } from '@/features/admin/MyTeamPage'
@@ -45,7 +46,8 @@ export default function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<RootRedirect />} />
           <Route element={<ProtectedRoute allow={['PLATFORM_ADMIN']} />}>
-            <Route path="/admin" element={<OrganisationsListPage />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/organisations" element={<OrganisationsListPage />} />
             <Route path="/admin/organisations/:organisationId" element={<OrganisationDetailPage />} />
             <Route path="/admin/audit-log" element={<AuditLogPage />} />
             <Route path="/admin/users" element={<UsersListPage />} />
