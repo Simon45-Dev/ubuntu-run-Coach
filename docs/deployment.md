@@ -1,10 +1,17 @@
-# Deploying a pilot: Vercel + Render + Neon + Cloudflare R2
+# Deploying a pilot: Vercel + Render + Neon + Backblaze B2
 
-A $0/month stack suitable for a pilot or testing phase. Frontend on Vercel,
-backend on Render's free web service, database on Neon's free Postgres,
-avatar uploads on Cloudflare R2's free tier (Render's free web service has no
-persistent disk, so avatars need object storage rather than local disk - see
-`src/modules/users/avatar-storage.service.ts`).
+A $0/month stack suitable for a pilot or testing phase, with no card on file
+anywhere. Frontend on Vercel, backend on Render's free web service, database
+on Neon's free Postgres, avatar uploads on Backblaze B2's free tier (Render's
+free web service has no persistent disk, so avatars need object storage
+rather than local disk - see `src/modules/users/avatar-storage.service.ts`).
+
+The B2 bucket is kept **private** - Backblaze requires payment history (or a
+one-time fee) to make a bucket public, but a private bucket needs neither.
+Avatars are instead served through our own backend at `GET /avatars/:filename`
+(`src/modules/users/avatars.controller.ts`), which fetches the object from B2
+using the account's own credentials and streams it back - the bucket itself
+is never exposed publicly.
 
 Trade-off to accept knowingly: Render's free web service sleeps after 15
 minutes of no traffic and takes roughly a minute to wake up on the next
@@ -13,18 +20,25 @@ launch where that cold start matters.
 
 ## 1. Database - Neon
 
-1. Create a Neon project.
+1. Create a Neon project (or reuse an existing empty one - if your account
+   provisions Neon through Vercel's integration, do this from Vercel's
+   Storage tab rather than Neon's own dashboard).
 2. Copy the pooled connection string it gives you - this is your `DATABASE_URL`.
 
-## 2. File storage - Cloudflare R2
+## 2. File storage - Backblaze B2
 
-1. Create an R2 bucket (e.g. `ubuntu-run-avatars`).
-2. In the bucket's settings, enable the public "r2.dev" development URL (or
-   attach a custom domain if you have one) - this becomes `R2_PUBLIC_URL`.
-3. Create an R2 API token scoped to Object Read & Write on that bucket. This
-   gives you `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`.
-4. Your Cloudflare account ID (visible on the R2 overview page) is
-   `R2_ACCOUNT_ID`. The bucket name is `R2_BUCKET`.
+1. Sign up at [backblaze.com/b2](https://www.backblaze.com/cloud-storage) - no
+   card required for a private bucket.
+2. Create a bucket (e.g. `ubuntu-run-avatars`), set **Files in Bucket are:**
+   to **Private**.
+3. Under **App Keys**, create a new Application Key scoped to that bucket
+   (Read & Write). This gives you a `keyID` (→ `S3_ACCESS_KEY_ID`) and an
+   `applicationKey` (→ `S3_SECRET_ACCESS_KEY`), shown once - copy both
+   immediately.
+4. On the bucket's detail page, note its **Endpoint**
+   (e.g. `s3.us-west-004.backblazeb2.com` - prefix it with `https://` for
+   `S3_ENDPOINT`) and region (e.g. `us-west-004`, for `S3_REGION`). The
+   bucket name itself is `S3_BUCKET`.
 
 ## 3. Backend - Render
 
@@ -42,7 +56,7 @@ launch where that cold start matters.
    - `JWT_ACCESS_TTL=15m`, `JWT_REFRESH_TTL=30d` (or your own choice)
    - `SMTP_*`/`EMAIL_FROM_ADDRESS` - optional; leave unset to have invite and
      password-reset emails log to the Render service logs instead of sending
-   - `R2_*` (five vars) - from step 2
+   - `S3_*` (five vars) - from step 2
 
 ## 4. Frontend - Vercel
 
@@ -65,5 +79,5 @@ DATABASE_URL="<your neon connection string>" npm run create-admin -- you@example
 - Log in as the admin account just created; confirm the dashboard at `/admin` loads real (zeroed) totals.
 - Register a coach through the normal sign-up flow.
 - Invite an athlete; confirm the invite email arrives (or check Render logs if `SMTP_HOST` is unset).
-- Upload a profile picture as the coach; confirm it renders and its URL points at your R2 public URL, not `/uploads/...`.
+- Upload a profile picture as the coach; confirm it renders and its URL is `/api/v1/avatars/<uuid>...`, not `/uploads/...`.
 - Log out, log back in, and leave the tab open past 15 minutes idle, then perform an action - confirms the session survives the cross-domain refresh cookie (`sameSite: 'none'` in production).

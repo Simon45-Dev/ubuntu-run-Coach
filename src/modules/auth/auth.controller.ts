@@ -124,7 +124,8 @@ export class AuthController {
   }
 
   private setRefreshCookie(res: Response, token: string) {
-    const isProduction = this.configService.get<string>('nodeEnv', { infer: true }) === 'production';
+    const isProduction =
+      this.configService.get<string>('nodeEnv', { infer: true }) === 'production';
     res.cookie(REFRESH_COOKIE, token, {
       httpOnly: true,
       secure: isProduction,

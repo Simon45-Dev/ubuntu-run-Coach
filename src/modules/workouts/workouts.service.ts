@@ -60,7 +60,10 @@ export class WorkoutsService {
 
     const dateErrors = parsed.rows
       .map((row, index) => {
-        if (row.scheduledDate < plan.startDate || (plan.endDate && row.scheduledDate > plan.endDate)) {
+        if (
+          row.scheduledDate < plan.startDate ||
+          (plan.endDate && row.scheduledDate > plan.endDate)
+        ) {
           return `Row ${index + 2}: scheduledDate must fall within the training plan dates`;
         }
         return null;

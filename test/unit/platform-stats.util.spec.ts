@@ -12,7 +12,11 @@ describe('bucketWeeklySignups', () => {
   it('tallies a date into the bucket for its week', () => {
     // 2026-09-21 is the Monday of the week containing `now`.
     const result = bucketWeeklySignups([new Date('2026-09-23T08:00:00.000Z')], [], 2, now);
-    expect(result[1]).toEqual({ weekStart: '2026-09-21T00:00:00.000Z', users: 1, organisations: 0 });
+    expect(result[1]).toEqual({
+      weekStart: '2026-09-21T00:00:00.000Z',
+      users: 1,
+      organisations: 0,
+    });
     expect(result[0].users).toBe(0);
   });
 

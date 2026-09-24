@@ -8,7 +8,10 @@ import { AppModule } from '../../../src/app.module';
 import { PrismaService } from '../../../src/database/prisma.service';
 import { HttpExceptionFilter } from '../../../src/common/filters/http-exception.filter';
 
-export async function createTestApp(): Promise<{ app: NestExpressApplication; prisma: PrismaService }> {
+export async function createTestApp(): Promise<{
+  app: NestExpressApplication;
+  prisma: PrismaService;
+}> {
   mkdirSync(join(process.cwd(), 'uploads', 'avatars'), { recursive: true });
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();

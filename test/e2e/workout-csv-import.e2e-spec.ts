@@ -2,7 +2,12 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
-import { createAthleteForCoach, createTrainingPlanForAthlete, loginAs, registerCoach } from './utils/fixtures';
+import {
+  createAthleteForCoach,
+  createTrainingPlanForAthlete,
+  loginAs,
+  registerCoach,
+} from './utils/fixtures';
 
 function daysFromNow(n: number): string {
   return new Date(Date.now() + n * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -59,11 +64,7 @@ describe('Workout CSV import (e2e)', () => {
     const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
     const plan = await createTrainingPlanForAthlete(app, coach.accessToken, athlete.id);
 
-    const csv = [
-      'date,type',
-      `${daysFromNow(1)},EASY`,
-      `${daysFromNow(9999)},EASY`,
-    ].join('\n');
+    const csv = ['date,type', `${daysFromNow(1)},EASY`, `${daysFromNow(9999)},EASY`].join('\n');
 
     const res = await request(app.getHttpServer())
       .post(`/api/v1/training-plans/${plan.id}/workouts/import`)

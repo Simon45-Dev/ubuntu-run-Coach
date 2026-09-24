@@ -34,7 +34,11 @@ export class PersonalBestsController {
   }
 
   @Patch('personal-bests/:id')
-  update(@CurrentUser() ctx: AuthContext, @Param('id') id: string, @Body() dto: UpdatePersonalBestDto) {
+  update(
+    @CurrentUser() ctx: AuthContext,
+    @Param('id') id: string,
+    @Body() dto: UpdatePersonalBestDto,
+  ) {
     return this.personalBestsService.update(ctx, id, dto);
   }
 

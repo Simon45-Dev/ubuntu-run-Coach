@@ -2,7 +2,12 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
-import { createAthleteForCoach, createPlatformAdmin, loginAs, registerCoach } from './utils/fixtures';
+import {
+  createAthleteForCoach,
+  createPlatformAdmin,
+  loginAs,
+  registerCoach,
+} from './utils/fixtures';
 
 describe('Coach onboarding via invite (e2e)', () => {
   let app: INestApplication;

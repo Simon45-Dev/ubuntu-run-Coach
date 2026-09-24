@@ -53,7 +53,10 @@ export class OrganisationsService {
     if (!org) {
       throw new NotFoundException('Organisation not found');
     }
-    return this.prisma.organisation.update({ where: { id }, data: { name: dto.name, type: dto.type } });
+    return this.prisma.organisation.update({
+      where: { id },
+      data: { name: dto.name, type: dto.type },
+    });
   }
 
   /** PLATFORM_ADMIN only - route already restricted by @Roles. */

@@ -43,7 +43,12 @@ export class AuditLogService {
     const where: Prisma.AuditLogWhereInput = {
       ...(action ? { action } : {}),
       ...(from || to
-        ? { createdAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } }
+        ? {
+            createdAt: {
+              ...(from ? { gte: new Date(from) } : {}),
+              ...(to ? { lte: new Date(to) } : {}),
+            },
+          }
         : {}),
     };
     const [items, total] = await Promise.all([
@@ -56,7 +61,9 @@ export class AuditLogService {
       this.prisma.auditLog.count({ where }),
     ]);
 
-    const actorIds = [...new Set(items.map((i) => i.actorUserId).filter((id): id is string => !!id))];
+    const actorIds = [
+      ...new Set(items.map((i) => i.actorUserId).filter((id): id is string => !!id)),
+    ];
     const actors = actorIds.length
       ? await this.prisma.user.findMany({
           where: { id: { in: actorIds } },

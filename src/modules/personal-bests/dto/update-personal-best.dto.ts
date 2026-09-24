@@ -1,6 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PbSource } from '@prisma/client';
-import { IsDateString, IsEnum, IsInt, IsOptional, IsPositive, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsPositive,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class UpdatePersonalBestDto {
   @ApiPropertyOptional()

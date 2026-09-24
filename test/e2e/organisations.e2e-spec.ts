@@ -37,7 +37,7 @@ describe('Organisations (e2e)', () => {
     expect(patchRes.body.name).toBe('Renamed Org');
   });
 
-  it('PLATFORM_ADMIN can update an organisation\'s name and type', async () => {
+  it("PLATFORM_ADMIN can update an organisation's name and type", async () => {
     const coach = await registerCoach(app, { organisationName: 'Original Name' });
     const admin = await createPlatformAdmin(prisma);
     const adminToken = await loginAs(app, admin.email, admin.password);

@@ -89,8 +89,15 @@ describe('Users (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/users/me/avatar')
       .set('Authorization', `Bearer ${coach.accessToken}`)
-      .attach('file', Buffer.from('not an image'), { filename: 'notes.txt', contentType: 'text/plain' })
+      .attach('file', Buffer.from('not an image'), {
+        filename: 'notes.txt',
+        contentType: 'text/plain',
+      })
       .expect(415);
+  });
+
+  it('GET /avatars/:filename 404s when remote storage is not configured (test env has no S3_* vars)', async () => {
+    await request(app.getHttpServer()).get('/api/v1/avatars/nonexistent.png').expect(404);
   });
 
   it('rejects invalid input on registration (bad email, short password)', async () => {

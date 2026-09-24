@@ -27,7 +27,12 @@ interface RawCsvRow {
   instructions?: string;
 }
 
-function parseOptionalNumber(raw: string | undefined, field: string, rowNum: number, errors: string[]): number | undefined {
+function parseOptionalNumber(
+  raw: string | undefined,
+  field: string,
+  rowNum: number,
+  errors: string[],
+): number | undefined {
   if (raw === undefined || raw === '') return undefined;
   const value = Number(raw);
   if (Number.isNaN(value)) {
@@ -78,7 +83,12 @@ export function parseWorkoutsCsv(buffer: Buffer): ParseWorkoutsCsvResult {
     }
 
     const distanceTargetKm = parseOptionalNumber(record.distanceKm, 'distanceKm', rowNum, errors);
-    const durationTargetSec = parseOptionalNumber(record.durationSec, 'durationSec', rowNum, errors);
+    const durationTargetSec = parseOptionalNumber(
+      record.durationSec,
+      'durationSec',
+      rowNum,
+      errors,
+    );
     const rpeTarget = parseOptionalNumber(record.rpeTarget, 'rpeTarget', rowNum, errors);
     if (rpeTarget !== undefined && (rpeTarget < 1 || rpeTarget > 10)) {
       errors.push(`Row ${rowNum}: "rpeTarget" must be between 1 and 10, got ${rpeTarget}`);
