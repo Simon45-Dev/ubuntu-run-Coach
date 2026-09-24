@@ -44,7 +44,11 @@ launch where that cold start matters.
 
 1. New Web Service, pointed at this repo, root directory `/` (the repo root,
    not `web/`).
-2. Build command: `npm ci && npx prisma generate && npm run build`
+2. Build command: `npm ci --include=dev && npx prisma generate && npm run build`
+   (`--include=dev` matters here: `NODE_ENV=production` is set below, and
+   `npm ci` otherwise skips devDependencies under that env var - which is
+   where `@nestjs/cli` lives, so the build fails with `nest: not found`
+   without this flag.)
 3. Start command: `npx prisma migrate deploy && npm run start:prod`
 4. Environment variables - every one listed in `.env.example`:
    - `NODE_ENV=production`
