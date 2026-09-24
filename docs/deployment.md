@@ -68,6 +68,12 @@ launch where that cold start matters.
 2. Environment variable: `VITE_API_BASE_URL=https://<your-render-app>.onrender.com/api/v1`
 3. Deploy.
 
+`web/vercel.json` (already in the repo) rewrites every path to `/index.html` -
+without it, any direct link to a client-side route (an invite email link, a
+password reset link, or just refreshing a page other than `/`) 404s, since
+Vercel only serves files matching an exact static path by default and this
+is a single-page app whose routing happens in the browser.
+
 ## 5. Bootstrap the first admin account
 
 `PLATFORM_ADMIN` has no self-registration route by design (only coach
