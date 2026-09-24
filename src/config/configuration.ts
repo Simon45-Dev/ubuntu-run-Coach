@@ -11,11 +11,9 @@ export default () => ({
   },
   mfaEncryptionKey: process.env.MFA_ENCRYPTION_KEY,
   email: {
-    smtpHost: process.env.SMTP_HOST,
-    smtpPort: parseInt(process.env.SMTP_PORT ?? '587', 10),
-    smtpUser: process.env.SMTP_USER,
-    smtpPass: process.env.SMTP_PASS,
+    brevoApiKey: process.env.BREVO_API_KEY,
     fromAddress: process.env.EMAIL_FROM_ADDRESS ?? 'no-reply@ubunturun.dev',
+    fromName: process.env.EMAIL_FROM_NAME,
   },
   storage: {
     s3Endpoint: process.env.S3_ENDPOINT,

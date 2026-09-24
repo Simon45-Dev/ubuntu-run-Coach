@@ -58,8 +58,14 @@ launch where that cold start matters.
    - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `MFA_ENCRYPTION_KEY` - generate
      fresh values with `openssl rand -hex 32` each, never reuse the dev ones
    - `JWT_ACCESS_TTL=15m`, `JWT_REFRESH_TTL=30d` (or your own choice)
-   - `SMTP_*`/`EMAIL_FROM_ADDRESS` - optional; leave unset to have invite and
-     password-reset emails log to the Render service logs instead of sending
+   - `BREVO_API_KEY`/`EMAIL_FROM_ADDRESS`/`EMAIL_FROM_NAME` - optional; leave
+     `BREVO_API_KEY` unset to have invite and password-reset emails log to the
+     Render service logs instead of sending. **Must be Brevo's HTTP API key,
+     not SMTP credentials** - Render's free web service blocks all outbound
+     SMTP ports (25/465/587), so raw SMTP will always time out here regardless
+     of provider or credentials; a plain HTTPS POST to Brevo's API is
+     unaffected. Get the API key from Brevo's dashboard under
+     **SMTP & API → API Keys** (a different credential than the SMTP key).
    - `S3_*` (five vars) - from step 2
 
 ## 4. Frontend - Vercel
@@ -88,6 +94,6 @@ DATABASE_URL="<your neon connection string>" npm run create-admin -- you@example
 
 - Log in as the admin account just created; confirm the dashboard at `/admin` loads real (zeroed) totals.
 - Register a coach through the normal sign-up flow.
-- Invite an athlete; confirm the invite email arrives (or check Render logs if `SMTP_HOST` is unset).
+- Invite an athlete; confirm the invite email arrives (or check Render logs if `BREVO_API_KEY` is unset).
 - Upload a profile picture as the coach; confirm it renders and its URL is `/api/v1/avatars/<uuid>...`, not `/uploads/...`.
 - Log out, log back in, and leave the tab open past 15 minutes idle, then perform an action - confirms the session survives the cross-domain refresh cookie (`sameSite: 'none'` in production).

@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 
 export interface SendEmailInput {
   to: string;
@@ -9,44 +8,59 @@ export interface SendEmailInput {
   html?: string;
 }
 
+const BREVO_SEND_URL = 'https://api.brevo.com/v3/smtp/email';
+
 /**
- * Sends via SMTP when SMTP_HOST is configured; otherwise logs the rendered
- * email instead of sending it, so invite/reset flows work in any environment
- * without real credentials. Callers never need to know which mode is active.
+ * Sends via Brevo's HTTP API when BREVO_API_KEY is configured; otherwise logs
+ * the rendered email instead of sending it, so invite/reset flows work in any
+ * environment without real credentials. Callers never need to know which
+ * mode is active.
+ *
+ * Uses Brevo's HTTP API rather than SMTP because Render's free web service -
+ * this project's primary hosting target, see docs/deployment.md - blocks all
+ * outbound traffic to SMTP ports (25/465/587) as an anti-spam policy; a
+ * plain HTTPS POST is unaffected.
  */
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transport: nodemailer.Transporter | null = null;
+  private readonly apiKey: string | undefined;
+  private readonly fromAddress: string | undefined;
+  private readonly fromName: string;
 
   constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('email.smtpHost');
-    const smtpUser = this.configService.get<string>('email.smtpUser');
-    if (host) {
-      this.transport = nodemailer.createTransport({
-        host,
-        port: this.configService.get<number>('email.smtpPort'),
-        auth: smtpUser
-          ? { user: smtpUser, pass: this.configService.get<string>('email.smtpPass') }
-          : undefined,
-      });
-    }
+    this.apiKey = this.configService.get<string>('email.brevoApiKey');
+    this.fromAddress = this.configService.get<string>('email.fromAddress');
+    this.fromName = this.configService.get<string>('email.fromName') ?? 'Ubuntu Run';
   }
 
   async send(input: SendEmailInput): Promise<void> {
-    if (!this.transport) {
+    if (!this.apiKey) {
       this.logger.log(
-        `[dev email - no SMTP configured] to=${input.to} subject="${input.subject}"\n${input.text}`,
+        `[dev email - no BREVO_API_KEY configured] to=${input.to} subject="${input.subject}"\n${input.text}`,
       );
       return;
     }
 
-    await this.transport.sendMail({
-      from: this.configService.get<string>('email.fromAddress'),
-      to: input.to,
-      subject: input.subject,
-      text: input.text,
-      html: input.html,
+    const res = await fetch(BREVO_SEND_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': this.apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: this.fromName, email: this.fromAddress },
+        to: [{ email: input.to }],
+        subject: input.subject,
+        textContent: input.text,
+        htmlContent: input.html,
+      }),
     });
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Brevo send failed (${res.status}): ${body}`);
+    }
   }
 }
