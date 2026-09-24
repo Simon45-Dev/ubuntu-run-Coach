@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Bell, ChevronDown, LogOut } from 'lucide-react'
+import { Bell, ChevronDown, LogOut, Menu } from 'lucide-react'
 import { listNotifications } from '@/api/notifications'
 import { getCurrentUser } from '@/api/users'
 import { useAuth } from '@/auth/AuthProvider'
@@ -10,7 +10,7 @@ import { resolveAvatarUrl } from '@/lib/format'
 
 const ROLE_LABELS = { COACH: 'Coach', ATHLETE: 'Athlete', PLATFORM_ADMIN: 'Platform Admin' } as const
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const { ctx, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -38,6 +38,13 @@ export function Topbar() {
 
   return (
     <header className="flex h-16 items-center justify-end gap-4 border-b border-navy/10 bg-white px-6">
+      <button
+        onClick={onMenuClick}
+        className="mr-auto rounded-full p-2 text-navy/60 hover:bg-mist hover:text-navy lg:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
       <Link to="/notifications" className="relative rounded-full p-2 text-navy/60 hover:bg-mist hover:text-navy">
         <Bell className="h-5 w-5" />
         {!!unread?.total && (
