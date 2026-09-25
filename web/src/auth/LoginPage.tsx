@@ -45,9 +45,12 @@ export function LoginPage() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-cover bg-center px-4"
+      className="relative flex min-h-screen items-center justify-center bg-cover bg-center px-4"
       style={{ backgroundImage: `url(${loginBackground})` }}
     >
+      <p className="absolute bottom-6 left-6 text-sm font-medium text-white/90">
+        Better coaching. Stronger runners. <span className="text-orange">Together.</span>
+      </p>
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           <img src={logo} alt="Ubuntu Run" className="mx-auto mb-6 h-auto w-40" />
