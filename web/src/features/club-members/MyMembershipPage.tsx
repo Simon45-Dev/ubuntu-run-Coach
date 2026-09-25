@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
 import { getClubMember, updateClubMember } from '@/api/clubMembers'
+import { listClubMemberPayments } from '@/api/clubMemberPayments'
 import { getOrganisation } from '@/api/organisations'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/ui/badge'
@@ -13,8 +14,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/EmptyState'
 import { FullPageSpinner } from '@/components/Spinner'
-import { formatDate } from '@/lib/format'
+import { formatCurrency, formatDate } from '@/lib/format'
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -45,6 +48,11 @@ export function MyMembershipPage() {
     queryKey: ['organisation', member?.organisationId],
     queryFn: () => getOrganisation(member!.organisationId),
     enabled: !!member?.organisationId,
+  })
+  const { data: payments } = useQuery({
+    queryKey: ['club-member-payments', memberId],
+    queryFn: () => listClubMemberPayments(memberId!),
+    enabled: !!memberId,
   })
 
   const {
@@ -203,6 +211,36 @@ export function MyMembershipPage() {
           <p className="text-xs text-navy/40">
             These dates are managed by your coach or club admin - contact them to renew your membership.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle>Payment history</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!payments || payments.length === 0 ? (
+            <EmptyState title="No payments recorded yet" />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Method</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.map((payment) => (
+                  <TableRow key={payment.id}>
+                    <TableCell className="text-navy/60">{formatDate(payment.paidAt)}</TableCell>
+                    <TableCell className="font-medium text-navy">{formatCurrency(payment.amount)}</TableCell>
+                    <TableCell className="text-navy/60">{payment.method}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

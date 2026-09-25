@@ -44,12 +44,18 @@ describe('Platform Stats (e2e)', () => {
     expect(before.body.totals.organisations).toBe(0);
     expect(before.body.totals.coaches).toBe(0);
     expect(before.body.totals.athletes).toBe(0);
+    expect(before.body.totals.clubMembers).toBe(0);
     expect(before.body.totals.usersByStatus.ACTIVE).toBe(1); // the admin itself
     expect(before.body.weeklySignups).toHaveLength(8);
     expect(before.body.recentOrganisations).toEqual([]);
 
     const coach = await registerCoach(app, { organisationName: 'Stats Test Org' });
     await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ firstName: 'Test', lastName: 'Member', email: 'stats-member@example.test' })
+      .expect(201);
 
     const after = await request(app.getHttpServer())
       .get('/api/v1/platform-stats')
@@ -58,6 +64,7 @@ describe('Platform Stats (e2e)', () => {
     expect(after.body.totals.organisations).toBe(1);
     expect(after.body.totals.coaches).toBe(1);
     expect(after.body.totals.athletes).toBe(1);
+    expect(after.body.totals.clubMembers).toBe(1);
     // createAthleteForCoach accepts the invite internally, so all three
     // users (admin, coach, athlete) are ACTIVE by the time this resolves.
     expect(after.body.totals.usersByStatus.ACTIVE).toBe(3);

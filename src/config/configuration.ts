@@ -10,6 +10,7 @@ export default () => ({
     refreshTtl: process.env.JWT_REFRESH_TTL,
   },
   mfaEncryptionKey: process.env.MFA_ENCRYPTION_KEY,
+  cronSecret: process.env.CRON_SECRET,
   email: {
     brevoApiKey: process.env.BREVO_API_KEY,
     fromAddress: process.env.EMAIL_FROM_ADDRESS ?? 'no-reply@ubunturun.dev',

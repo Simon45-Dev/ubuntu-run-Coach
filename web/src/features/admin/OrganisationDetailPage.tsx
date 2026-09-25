@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { Download, Pencil, Plus } from 'lucide-react'
+import { Download, Pencil, Plus, Upload, Wallet } from 'lucide-react'
 import { utils, writeFile } from 'xlsx'
 import { getOrganisation } from '@/api/organisations'
 import { deleteCoach, listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
@@ -18,6 +18,8 @@ import type { ClubMember, Coach } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -33,8 +35,11 @@ import { InviteCoachDialog } from './InviteCoachDialog'
 import { EditOrganisationDialog } from './EditOrganisationDialog'
 import { CreateClubMemberDialog } from './CreateClubMemberDialog'
 import { EditClubMemberDialog } from './EditClubMemberDialog'
+import { ImportClubMembersCsvDialog } from './ImportClubMembersCsvDialog'
+import { ClubMemberPaymentsDialog } from './ClubMemberPaymentsDialog'
 import { InviteLinkDialog } from '../roster/InviteLinkDialog'
 import { getMembershipStatus, type MembershipStatus } from './membershipStatus'
+import { filterClubMembers } from './clubMemberFilter'
 import { toClubMemberExportRows } from './clubMembersExport'
 
 const MEMBERSHIP_STATUS_VARIANT: Record<MembershipStatus, 'good' | 'watch' | 'attention' | 'inactive'> = {
@@ -95,8 +100,12 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
   const [editOpen, setEditOpen] = useState(false)
   const [removeId, setRemoveId] = useState<string | null>(null)
   const [addMemberOpen, setAddMemberOpen] = useState(false)
+  const [importMembersOpen, setImportMembersOpen] = useState(false)
   const [memberInvite, setMemberInvite] = useState<{ token: string; expiresAt: string } | null>(null)
   const [editingMember, setEditingMember] = useState<ClubMember | null>(null)
+  const [paymentsMember, setPaymentsMember] = useState<ClubMember | null>(null)
+  const [memberSearch, setMemberSearch] = useState('')
+  const [memberStatusFilter, setMemberStatusFilter] = useState<MembershipStatus | 'ALL'>('ALL')
 
   const { data: organisation, isLoading: orgLoading } = useQuery({
     queryKey: ['organisation', organisationId],
@@ -287,12 +296,43 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
               Export to Excel
             </Button>
           )}
+          <Button variant="outline" onClick={() => setImportMembersOpen(true)}>
+            <Upload className="h-4 w-4" />
+            Import CSV
+          </Button>
           <Button onClick={() => setAddMemberOpen(true)}>
             <Plus className="h-4 w-4" />
             Add member
           </Button>
         </div>
       </div>
+
+      {members && members.length > 0 && (
+        <div className="flex gap-3">
+          <Input
+            placeholder="Search by name, email, or member #"
+            value={memberSearch}
+            onChange={(e) => setMemberSearch(e.target.value)}
+            className="max-w-xs"
+          />
+          <Select
+            value={memberStatusFilter}
+            onValueChange={(v) => setMemberStatusFilter(v as MembershipStatus | 'ALL')}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All statuses</SelectItem>
+              {(Object.keys(MEMBERSHIP_STATUS_LABEL) as MembershipStatus[]).map((status) => (
+                <SelectItem key={status} value={status}>
+                  {MEMBERSHIP_STATUS_LABEL[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {membersLoading && <FullPageSpinner />}
 
@@ -305,6 +345,13 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
       )}
 
       {!membersLoading && members && members.length > 0 && (
+        <>
+        {(() => {
+          const filteredMembers = filterClubMembers(members, memberSearch, memberStatusFilter)
+          if (filteredMembers.length === 0) {
+            return <EmptyState title="No club members match these filters" />
+          }
+          return (
         <Table>
           <TableHeader>
             <TableRow>
@@ -317,7 +364,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((member) => {
+            {filteredMembers.map((member) => {
               const membershipStatus = getMembershipStatus(member.membershipExpiryDate, new Date())
               return (
               <TableRow key={member.id}>
@@ -342,6 +389,10 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setEditingMember(member)}>
                       Edit
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setPaymentsMember(member)}>
+                      <Wallet className="h-4 w-4" />
+                      Payments
                     </Button>
                     {!member.user && (
                       <Button
@@ -378,6 +429,9 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
             })}
           </TableBody>
         </Table>
+          )
+        })()}
+        </>
       )}
 
       {organisationId && (
@@ -391,6 +445,13 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
         />
       )}
       {organisationId && (
+        <ImportClubMembersCsvDialog
+          organisationId={organisationId}
+          open={importMembersOpen}
+          onOpenChange={setImportMembersOpen}
+        />
+      )}
+      {organisationId && (
         <EditClubMemberDialog
           organisationId={organisationId}
           member={editingMember}
@@ -398,6 +459,11 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
           onOpenChange={(open) => !open && setEditingMember(null)}
         />
       )}
+      <ClubMemberPaymentsDialog
+        member={paymentsMember}
+        open={!!paymentsMember}
+        onOpenChange={(open) => !open && setPaymentsMember(null)}
+      />
       {memberInvite && (
         <InviteLinkDialog
           open={!!memberInvite}

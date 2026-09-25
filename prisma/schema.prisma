@@ -302,9 +302,17 @@ model ClubMember {
   membershipExpiryDate DateTime?
   lastRenewalDate      DateTime?
 
+  /// Set when an expiry reminder email is sent; reset to null whenever
+  /// membershipExpiryDate changes, so a renewal re-arms future reminders
+  /// instead of the member being silently skipped forever. See
+  /// ClubMembersService.sendExpiryReminders/update.
+  lastReminderSentAt DateTime?
+
   nextOfKinName         String?
   nextOfKinPhone        String?
   nextOfKinRelationship String?
+
+  payments ClubMemberPayment[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -313,6 +321,31 @@ model ClubMember {
   @@unique([organisationId, membershipNumber])
   @@index([organisationId])
   @@map("club_members")
+}
+
+enum PaymentMethod {
+  CASH
+  EFT
+  CARD
+  OTHER
+}
+
+/// Record-keeping only - no payment gateway integration. A coach/admin logs
+/// that a payment happened; no money actually moves through the app.
+model ClubMemberPayment {
+  id                String        @id @default(uuid())
+  clubMemberId      String
+  clubMember        ClubMember    @relation(fields: [clubMemberId], references: [id])
+  amount            Decimal       @db.Decimal(10, 2)
+  method            PaymentMethod
+  paidAt            DateTime
+  note              String?
+  recordedByUserId  String
+
+  createdAt DateTime @default(now())
+
+  @@index([clubMemberId])
+  @@map("club_member_payments")
 }
 
 model PersonalBest {

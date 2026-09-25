@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
@@ -31,6 +32,7 @@ import { PlatformStatsModule } from './modules/platform-stats/platform-stats.mod
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration], validate: validateEnv }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuditLogModule,
     HealthModule,

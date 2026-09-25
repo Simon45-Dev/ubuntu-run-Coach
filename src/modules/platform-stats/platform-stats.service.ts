@@ -18,6 +18,7 @@ export class PlatformStatsService {
       organisations,
       coaches,
       athletes,
+      clubMembers,
       activeUsers,
       invitedUsers,
       suspendedUsers,
@@ -29,6 +30,7 @@ export class PlatformStatsService {
       this.prisma.organisation.count({ where: { deletedAt: null } }),
       this.prisma.coach.count({ where: { deletedAt: null } }),
       this.prisma.athlete.count({ where: { deletedAt: null } }),
+      this.prisma.clubMember.count({ where: { deletedAt: null } }),
       this.prisma.user.count({ where: { status: UserStatus.ACTIVE, deletedAt: null } }),
       this.prisma.user.count({ where: { status: UserStatus.INVITED, deletedAt: null } }),
       this.prisma.user.count({ where: { status: UserStatus.SUSPENDED, deletedAt: null } }),
@@ -54,6 +56,7 @@ export class PlatformStatsService {
         organisations,
         coaches,
         athletes,
+        clubMembers,
         usersByStatus: {
           ACTIVE: activeUsers,
           INVITED: invitedUsers,

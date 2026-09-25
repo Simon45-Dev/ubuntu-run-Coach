@@ -205,4 +205,160 @@ describe('Club Members (e2e)', () => {
       .send({ firstName: 'Incomplete' })
       .expect(400);
   });
+
+  it('imports club members from a CSV file', async () => {
+    const coach = await registerCoach(app);
+    const csv =
+      'firstName,lastName,email,idNumber\n' +
+      'John,Smith,john.smith@example.test,1234567890123\n' +
+      'Jane,Doe,jane.doe@example.test,';
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members/import`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .attach('file', Buffer.from(csv), 'members.csv')
+      .expect(201);
+    expect(res.body).toHaveLength(2);
+    expect(res.body.map((m: { membershipNumber: string }) => m.membershipNumber)).toEqual([
+      '0001',
+      '0002',
+    ]);
+    expect(res.body[0].idNumber).toBe('1234567890123');
+  });
+
+  it('rejects a CSV import with invalid rows, importing nothing', async () => {
+    const coach = await registerCoach(app);
+    const csv = 'firstName,lastName,email\n,Smith,bad-email';
+
+    const res = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members/import`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .attach('file', Buffer.from(csv), 'members.csv')
+      .expect(400);
+    expect(res.body.errors.length).toBeGreaterThan(0);
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+    expect(listRes.body).toHaveLength(0);
+  });
+
+  it('a coach from a different organisation cannot import into another club', async () => {
+    const coachA = await registerCoach(app);
+    const coachB = await registerCoach(app);
+    const csv = 'firstName,lastName,email\nJohn,Smith,john.smith@example.test';
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coachA.organisationId}/club-members/import`)
+      .set('Authorization', `Bearer ${coachB.accessToken}`)
+      .attach('file', Buffer.from(csv), 'members.csv')
+      .expect(403);
+  });
+
+  it('sends an expiry reminder once, skips an already-reminded member, and renewing re-arms it', async () => {
+    const coach = await registerCoach(app);
+    const createRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send(MEMBER_INPUT)
+      .expect(201);
+    const memberId = createRes.body.id as string;
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${memberId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ membershipExpiryDate: '2020-01-01' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/club-members/send-expiry-reminders')
+      .set('x-cron-secret', 'wrong-secret')
+      .expect(401);
+
+    const firstRun = await request(app.getHttpServer())
+      .post('/api/v1/club-members/send-expiry-reminders')
+      .set('x-cron-secret', 'dev-cron-secret')
+      .expect(201);
+    expect(firstRun.body.sent).toBe(1);
+
+    const afterFirstRun = await request(app.getHttpServer())
+      .get(`/api/v1/club-members/${memberId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+    expect(afterFirstRun.body.lastReminderSentAt).not.toBeNull();
+
+    const secondRun = await request(app.getHttpServer())
+      .post('/api/v1/club-members/send-expiry-reminders')
+      .set('x-cron-secret', 'dev-cron-secret')
+      .expect(201);
+    expect(secondRun.body.sent).toBe(0);
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${memberId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ membershipExpiryDate: '2020-06-01' })
+      .expect(200);
+    const afterRenewal = await request(app.getHttpServer())
+      .get(`/api/v1/club-members/${memberId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+    expect(afterRenewal.body.lastReminderSentAt).toBeNull();
+  });
+
+  it('a coach records a payment, the member can view but not create one, and the coach can delete it', async () => {
+    const coach = await registerCoach(app);
+    const createRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send(MEMBER_INPUT)
+      .expect(201);
+    const memberId = createRes.body.id as string;
+
+    const paymentRes = await request(app.getHttpServer())
+      .post(`/api/v1/club-members/${memberId}/payments`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ amount: 500, method: 'CASH', paidAt: '2026-01-15', note: 'Annual fee' })
+      .expect(201);
+    expect(String(paymentRes.body.amount)).toContain('500');
+    const paymentId = paymentRes.body.id as string;
+
+    const listRes = await request(app.getHttpServer())
+      .get(`/api/v1/club-members/${memberId}/payments`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+    expect(listRes.body).toHaveLength(1);
+
+    const inviteRes = await request(app.getHttpServer())
+      .post(`/api/v1/club-members/${memberId}/invite`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(201);
+    const acceptRes = await request(app.getHttpServer())
+      .post('/api/v1/auth/accept-invite')
+      .send({ token: inviteRes.body.inviteToken, password: 'MemberPassword123!' })
+      .expect(200);
+    const memberToken = acceptRes.body.accessToken as string;
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/club-members/${memberId}/payments`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/club-members/${memberId}/payments`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ amount: 100, method: 'CASH', paidAt: '2026-02-01' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/club-member-payments/${paymentId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    const afterDelete = await request(app.getHttpServer())
+      .get(`/api/v1/club-members/${memberId}/payments`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+    expect(afterDelete.body).toHaveLength(0);
+  });
 });

@@ -62,3 +62,13 @@ export async function resendClubMemberInvite(id: string): Promise<InviteClubMemb
   const res = await apiClient.post<InviteClubMemberResult>(`/club-members/${id}/resend-invite`)
   return res.data
 }
+
+export async function importClubMembersCsv(organisationId: string, file: File): Promise<ClubMember[]> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await apiClient.post<ClubMember[]>(
+    `/organisations/${organisationId}/club-members/import`,
+    formData,
+  )
+  return res.data
+}

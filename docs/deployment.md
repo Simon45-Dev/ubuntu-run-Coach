@@ -95,6 +95,9 @@ with its own credentials and streams them back via `GET /avatars/:filename`
      a bare email (no `"Name <email>"` wrapper); the name is the separate
      `EMAIL_FROM_NAME` field.
    - `S3_*` (five vars) - from step 2
+   - `CRON_SECRET` - optional, only needed for club membership expiry
+     reminders; see section 7. Generate with `openssl rand -hex 32`, same as
+     the JWT secrets.
 
 ## 4. Frontend - Vercel
 
@@ -132,6 +135,56 @@ DATABASE_URL="<neon connection string>" npm run create-admin -- you@example.com 
   perform an action - confirms the session survives the cross-domain refresh
   cookie (`sameSite: 'none'` in production, `src/modules/auth/auth.controller.ts`).
 - Check the app on an actual phone, not just desktop browser width.
+
+## 7. Expiry reminders (club membership)
+
+Club members with a `membershipExpiryDate` get a one-time reminder email once
+their membership is `EXPIRING_SOON` (within 30 days) or `EXPIRED`
+(`src/modules/club-members/club-membership-status.util.ts`). This relies on
+two things running together:
+
+- An in-process `@Cron('0 8 * * *')` job (`ClubMembersService.handleExpiryReminderCron`)
+  that fires at 08:00 server time **if the Render instance happens to be
+  awake at that moment**.
+- `POST /club-members/send-expiry-reminders` - the same logic exposed as a
+  plain HTTP endpoint, protected by a shared secret header (`x-cron-secret`,
+  checked against the `CRON_SECRET` env var) instead of a user JWT, since an
+  external pinger can't hold a 15-minute-lived login session. It 401s if
+  `CRON_SECRET` is unset or the header doesn't match.
+
+**Render's free web service sleeps after 15 minutes idle and cannot wake
+itself for an internal timer** - the in-process cron alone will silently miss
+its 08:00 firing on any day the service is asleep at the time. The external
+ping is what actually guarantees delivery, and it also happens to wake a
+sleeping instance. Set `CRON_SECRET` in Render (see section 3), then point an
+external scheduler at it daily, for example:
+
+- **cron-job.org** (free, no code) - create a job hitting
+  `POST https://<render-app>.onrender.com/api/v1/club-members/send-expiry-reminders`
+  with header `x-cron-secret: <the same value>`, once a day.
+- **A scheduled GitHub Actions workflow** in this repo, e.g.:
+  ```yaml
+  on:
+    schedule:
+      - cron: '0 8 * * *'
+  jobs:
+    ping:
+      runs-on: ubuntu-latest
+      steps:
+        - run: |
+            curl -sf -X POST \
+              -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+              https://<render-app>.onrender.com/api/v1/club-members/send-expiry-reminders
+  ```
+  (store the secret in the repo's Actions secrets, not the workflow file).
+
+Renewing a member (setting a new `membershipExpiryDate` via the app) clears
+their `lastReminderSentAt`, so they're eligible for a fresh reminder next time
+they approach expiry rather than being silently skipped forever after the
+first one.
+
+**Deferred for the pilot**: neither external-ping option above has actually
+been set up yet - do this before relying on reminders in practice.
 
 ## Gotchas hit during setup (and how to avoid repeating them)
 

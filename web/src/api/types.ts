@@ -114,6 +114,22 @@ export interface ClubMember {
   user: { id: string; email: string; name: string; status: UserStatus } | null
 }
 
+export type PaymentMethod = 'CASH' | 'EFT' | 'CARD' | 'OTHER'
+
+export const PAYMENT_METHODS: PaymentMethod[] = ['CASH', 'EFT', 'CARD', 'OTHER']
+
+/** Record-keeping only - no payment gateway integration. See ClubMemberPayment (backend). */
+export interface ClubMemberPayment {
+  id: string
+  clubMemberId: string
+  amount: string
+  method: PaymentMethod
+  paidAt: string
+  note: string | null
+  recordedByUserId: string
+  createdAt: string
+}
+
 export interface GroupMembership {
   id: string
   athleteId: string
@@ -363,6 +379,7 @@ export interface PlatformStats {
     organisations: number
     coaches: number
     athletes: number
+    clubMembers: number
     usersByStatus: Record<UserStatus, number>
   }
   weeklySignups: WeeklySignupEntry[]

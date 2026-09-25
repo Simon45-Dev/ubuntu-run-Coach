@@ -83,7 +83,7 @@ export function AdminDashboardPage() {
               <CardTitle>Platform Totals</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 <div>
                   <p className="text-xl font-bold text-navy">{stats.totals.organisations}</p>
                   <p className="text-xs text-navy/50">Organisations</p>
@@ -95,6 +95,10 @@ export function AdminDashboardPage() {
                 <div>
                   <p className="text-xl font-bold text-navy">{stats.totals.athletes}</p>
                   <p className="text-xs text-navy/50">Athletes</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-navy">{stats.totals.clubMembers}</p>
+                  <p className="text-xs text-navy/50">Club Members</p>
                 </div>
               </div>
             </CardContent>
