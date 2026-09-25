@@ -42,3 +42,13 @@ export async function deleteOrganisationLogo(id: string): Promise<Organisation> 
   const res = await apiClient.delete<Organisation>(`/organisations/${id}/logo`)
   return res.data
 }
+
+export async function suspendOrganisation(id: string, reason: string): Promise<Organisation> {
+  const res = await apiClient.post<Organisation>(`/organisations/${id}/suspend`, { reason })
+  return res.data
+}
+
+export async function reactivateOrganisation(id: string): Promise<Organisation> {
+  const res = await apiClient.post<Organisation>(`/organisations/${id}/reactivate`)
+  return res.data
+}

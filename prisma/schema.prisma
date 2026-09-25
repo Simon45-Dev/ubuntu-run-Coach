@@ -118,6 +118,14 @@ model Organisation {
   /// AvatarStorageService), just reused for a different owner.
   logoUrl String?
 
+  /// PLATFORM_ADMIN-only lockout (non-payment, compliance) - blocks every
+  /// user in this org from logging in/refreshing/accepting an invite/
+  /// resetting their password, mirroring the existing per-user
+  /// UserStatus.SUSPENDED lazy-lockout timing exactly. See
+  /// AuthService.assertOrganisationNotSuspended.
+  suspendedAt      DateTime?
+  suspensionReason String?
+
   /// Atomic per-club counter for ClubMember.membershipNumber - always
   /// incremented via a single UPDATE...RETURNING inside the create
   /// transaction (ClubMembersService.create), never read-then-written, so

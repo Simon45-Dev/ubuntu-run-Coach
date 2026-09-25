@@ -5,6 +5,7 @@ import request from 'supertest';
 import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
 import {
+  createAthleteForCoach,
   createClubAdminForCoach,
   createPlatformAdmin,
   loginAs,
@@ -197,5 +198,101 @@ describe('Organisations (e2e)', () => {
       .set('Authorization', `Bearer ${acceptRes.body.accessToken}`)
       .attach('file', PNG_BUFFER, { filename: 'logo.png', contentType: 'image/png' })
       .expect(403);
+  });
+
+  it('PLATFORM_ADMIN can suspend an organisation, locking out login and refresh for every member', async () => {
+    const email = 'suspend-flow@example.test';
+    const password = 'TestPassword123!';
+    const registerRes = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({ email, password, name: 'Suspend Flow', organisationName: 'Suspend Org' })
+      .expect(201);
+    const organisationId = (
+      await request(app.getHttpServer())
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${registerRes.body.accessToken}`)
+        .expect(200)
+    ).body.organisationId as string;
+    const refreshCookie = registerRes.headers['set-cookie'];
+
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+
+    // Requires a reason.
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${organisationId}/suspend`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: '' })
+      .expect(400);
+
+    const suspendRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${organisationId}/suspend`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Subscription payment overdue' })
+      .expect(201);
+    expect(suspendRes.body.suspensionReason).toBe('Subscription payment overdue');
+    expect(suspendRes.body.suspendedAt).not.toBeNull();
+
+    const loginRes = await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email, password })
+      .expect(401);
+    expect(loginRes.body.message).toContain('suspended');
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', refreshCookie)
+      .expect(401);
+
+    // PLATFORM_ADMIN's own login is unaffected.
+    await loginAs(app, admin.email, admin.password);
+
+    const reactivateRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${organisationId}/reactivate`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+    expect(reactivateRes.body.suspendedAt).toBeNull();
+    expect(reactivateRes.body.suspensionReason).toBeNull();
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email, password })
+      .expect(200);
+  });
+
+  it('a non-admin cannot suspend or reactivate an organisation, even their own', async () => {
+    const coach = await registerCoach(app);
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/suspend`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ reason: 'Trying to self-suspend' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/reactivate`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(403);
+  });
+
+  it('suspending an organisation locks out an athlete and a club admin too, not just the coach', async () => {
+    const coach = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const clubAdmin = await createClubAdminForCoach(app, coach.accessToken, coach.organisationId);
+
+    const admin = await createPlatformAdmin(prisma);
+    const adminToken = await loginAs(app, admin.email, admin.password);
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/suspend`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ reason: 'Compliance review' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: athlete.email, password: athlete.password })
+      .expect(401);
+    await request(app.getHttpServer())
+      .post('/api/v1/auth/login')
+      .send({ email: clubAdmin.email, password: clubAdmin.password })
+      .expect(401);
   });
 });

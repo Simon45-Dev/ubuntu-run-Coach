@@ -18,12 +18,14 @@ import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { OrganisationsService } from './organisations.service';
 import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
+import { SuspendOrganisationDto } from './dto/suspend-organisation.dto';
 import { EXT_BY_MIME } from '../../common/storage/avatar-storage.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { OrgScopeGuard } from '../../common/guards/org-scope.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ScopeResource } from '../../common/decorators/scope-resource.decorator';
+import { Audit } from '../../common/decorators/audit.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
@@ -94,5 +96,19 @@ export class OrganisationsController {
   @ScopeResource('organisation')
   deleteLogo(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
     return this.organisationsService.deleteLogo(ctx, id);
+  }
+
+  @Post(':id/suspend')
+  @Roles(Role.PLATFORM_ADMIN)
+  @Audit('ORGANISATION_SUSPENDED')
+  suspend(@Param('id') id: string, @Body() dto: SuspendOrganisationDto) {
+    return this.organisationsService.suspend(id, dto);
+  }
+
+  @Post(':id/reactivate')
+  @Roles(Role.PLATFORM_ADMIN)
+  @Audit('ORGANISATION_REACTIVATED')
+  reactivate(@Param('id') id: string) {
+    return this.organisationsService.reactivate(id);
   }
 }

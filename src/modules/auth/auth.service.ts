@@ -112,14 +112,18 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
+    const organisationId =
+      user.coachProfile?.organisationId ??
+      user.athleteProfile?.organisationId ??
+      user.clubMemberProfile?.organisationId ??
+      user.clubAdminProfile?.organisationId ??
+      undefined;
+    await this.assertOrganisationNotSuspended(organisationId);
+
     const authContext = this.buildAuthContext(
       user,
       user.coachProfile?.id,
-      user.coachProfile?.organisationId ??
-        user.athleteProfile?.organisationId ??
-        user.clubMemberProfile?.organisationId ??
-        user.clubAdminProfile?.organisationId ??
-        undefined,
+      organisationId,
       user.athleteProfile?.id,
       user.clubMemberProfile?.id,
       user.clubAdminProfile?.id,
@@ -171,14 +175,18 @@ export class AuthService {
       },
     });
 
+    const organisationId =
+      updated.coachProfile?.organisationId ??
+      updated.athleteProfile?.organisationId ??
+      updated.clubMemberProfile?.organisationId ??
+      updated.clubAdminProfile?.organisationId ??
+      undefined;
+    await this.assertOrganisationNotSuspended(organisationId);
+
     const authContext = this.buildAuthContext(
       updated,
       updated.coachProfile?.id,
-      updated.coachProfile?.organisationId ??
-        updated.athleteProfile?.organisationId ??
-        updated.clubMemberProfile?.organisationId ??
-        updated.clubAdminProfile?.organisationId ??
-        undefined,
+      organisationId,
       updated.athleteProfile?.id,
       updated.clubMemberProfile?.id,
       updated.clubAdminProfile?.id,
@@ -249,14 +257,18 @@ export class AuthService {
       },
     });
 
+    const organisationId =
+      updated.coachProfile?.organisationId ??
+      updated.athleteProfile?.organisationId ??
+      updated.clubMemberProfile?.organisationId ??
+      updated.clubAdminProfile?.organisationId ??
+      undefined;
+    await this.assertOrganisationNotSuspended(organisationId);
+
     const authContext = this.buildAuthContext(
       updated,
       updated.coachProfile?.id,
-      updated.coachProfile?.organisationId ??
-        updated.athleteProfile?.organisationId ??
-        updated.clubMemberProfile?.organisationId ??
-        updated.clubAdminProfile?.organisationId ??
-        undefined,
+      organisationId,
       updated.athleteProfile?.id,
       updated.clubMemberProfile?.id,
       updated.clubAdminProfile?.id,
@@ -296,14 +308,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    const organisationId =
+      user.coachProfile?.organisationId ??
+      user.athleteProfile?.organisationId ??
+      user.clubMemberProfile?.organisationId ??
+      user.clubAdminProfile?.organisationId ??
+      undefined;
+    await this.assertOrganisationNotSuspended(organisationId);
+
     const authContext = this.buildAuthContext(
       user,
       user.coachProfile?.id,
-      user.coachProfile?.organisationId ??
-        user.athleteProfile?.organisationId ??
-        user.clubMemberProfile?.organisationId ??
-        user.clubAdminProfile?.organisationId ??
-        undefined,
+      organisationId,
       user.athleteProfile?.id,
       user.clubMemberProfile?.id,
       user.clubAdminProfile?.id,
@@ -360,6 +376,24 @@ export class AuthService {
       where: { id: userId },
       data: { mfaEnabled: false, mfaSecretEncrypted: null, mfaType: null },
     });
+  }
+
+  /**
+   * PLATFORM_ADMIN has no organisationId and is never blocked. Same
+   * lazy-lockout timing as the existing user.status !== ACTIVE check right
+   * above every call site of this - blocks the next login/refresh/accept-
+   * invite/reset-password, but doesn't retroactively revoke an
+   * already-issued access token, which simply expires on its own short TTL.
+   */
+  private async assertOrganisationNotSuspended(organisationId: string | undefined): Promise<void> {
+    if (!organisationId) return;
+    const org = await this.prisma.organisation.findUnique({
+      where: { id: organisationId },
+      select: { suspendedAt: true },
+    });
+    if (org?.suspendedAt) {
+      throw new UnauthorizedException('This organisation has been suspended. Contact support.');
+    }
   }
 
   private buildAuthContext(

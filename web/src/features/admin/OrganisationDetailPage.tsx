@@ -3,9 +3,15 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { Building2, Download, Pencil, Plus, Upload, Wallet, X } from 'lucide-react'
+import { Ban, Building2, CheckCircle, Download, Pencil, Plus, Upload, Wallet, X } from 'lucide-react'
 import { utils, writeFile } from 'xlsx'
-import { deleteOrganisationLogo, getOrganisation, uploadOrganisationLogo } from '@/api/organisations'
+import {
+  deleteOrganisationLogo,
+  getOrganisation,
+  reactivateOrganisation,
+  suspendOrganisation,
+  uploadOrganisationLogo,
+} from '@/api/organisations'
 import { deleteCoach, listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
 import { listRoster } from '@/api/athletes'
 import {
@@ -24,7 +30,8 @@ import type { ClubMember, Coach } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { Input, Textarea } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -116,6 +123,8 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteClubAdminOpen, setInviteClubAdminOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [suspendOpen, setSuspendOpen] = useState(false)
+  const [suspendReason, setSuspendReason] = useState('')
   const [removeId, setRemoveId] = useState<string | null>(null)
   const [removeClubAdminId, setRemoveClubAdminId] = useState<string | null>(null)
   const [addMemberOpen, setAddMemberOpen] = useState(false)
@@ -292,6 +301,39 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
     },
   })
 
+  const suspendMutation = useMutation({
+    mutationFn: () => suspendOrganisation(organisationId!, suspendReason),
+    onSuccess: () => {
+      toast.success('Organisation suspended')
+      setSuspendOpen(false)
+      setSuspendReason('')
+      void queryClient.invalidateQueries({ queryKey: ['organisation', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not suspend organisation')
+          : 'Could not suspend organisation'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
+  const reactivateMutation = useMutation({
+    mutationFn: () => reactivateOrganisation(organisationId!),
+    onSuccess: () => {
+      toast.success('Organisation reactivated')
+      void queryClient.invalidateQueries({ queryKey: ['organisation', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ??
+            'Could not reactivate organisation')
+          : 'Could not reactivate organisation'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
   if (orgLoading || !organisation) return <FullPageSpinner />
 
   function onLogoFileChange(file: File | null) {
@@ -320,16 +362,43 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-navy">{organisation.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-navy">{organisation.name}</h1>
+              {organisation.suspendedAt && <Badge variant="attention">Suspended</Badge>}
+            </div>
             <p className="text-sm text-navy/60">{organisation.type}</p>
+            {organisation.suspendedAt && (
+              <p className="mt-1 text-xs text-status-attention">
+                {organisation.suspensionReason} - since {new Date(organisation.suspendedAt).toLocaleDateString()}
+              </p>
+            )}
           </div>
         </div>
-        {isAdmin && (
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          {isAdmin && organisation.suspendedAt && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => reactivateMutation.mutate()}
+              disabled={reactivateMutation.isPending}
+            >
+              <CheckCircle className="h-4 w-4" />
+              Reactivate
+            </Button>
+          )}
+          {isAdmin && !organisation.suspendedAt && (
+            <Button variant="destructive" size="sm" onClick={() => setSuspendOpen(true)}>
+              <Ban className="h-4 w-4" />
+              Suspend
+            </Button>
+          )}
+        </div>
       </div>
 
       {canManageLogo && (
@@ -726,6 +795,45 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
       {isAdmin && (
         <EditOrganisationDialog organisation={organisation} open={editOpen} onOpenChange={setEditOpen} />
       )}
+
+      <Dialog
+        open={suspendOpen}
+        onOpenChange={(open) => {
+          if (!open) setSuspendReason('')
+          setSuspendOpen(open)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend this organisation?</DialogTitle>
+            <DialogDescription>
+              Every coach, athlete, club member, and club admin in this organisation will be unable to
+              log in until it's reactivated. A reason is required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="suspend-reason">Reason</Label>
+            <Textarea
+              id="suspend-reason"
+              placeholder="e.g. Subscription payment overdue, compliance review"
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuspendOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => suspendMutation.mutate()}
+              disabled={!suspendReason.trim() || suspendMutation.isPending}
+            >
+              {suspendMutation.isPending ? 'Suspending...' : 'Suspend'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!removeId} onOpenChange={(open) => !open && setRemoveId(null)}>
         <DialogContent>

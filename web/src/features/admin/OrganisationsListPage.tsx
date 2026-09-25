@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Building2, Plus } from 'lucide-react'
 import { listOrganisations } from '@/api/organisations'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -51,7 +52,10 @@ export function OrganisationsListPage() {
                     <Building2 className="h-5 w-5 text-green" />
                   </div>
                   <div>
-                    <p className="font-semibold text-navy">{org.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-navy">{org.name}</p>
+                      {org.suspendedAt && <Badge variant="attention">Suspended</Badge>}
+                    </div>
                     <p className="text-sm text-navy/60">{org.type}</p>
                   </div>
                 </CardContent>

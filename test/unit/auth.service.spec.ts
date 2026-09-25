@@ -13,6 +13,12 @@ function buildService(overrides: { userRecord: unknown }) {
     refreshToken: {
       create: jest.fn().mockResolvedValue({}),
     },
+    // Not suspended by default - see the dedicated
+    // AuthService.assertOrganisationNotSuspended describe block below for
+    // the suspended case.
+    organisation: {
+      findUnique: jest.fn().mockResolvedValue({ suspendedAt: null }),
+    },
   };
   const jwtService = { sign: jest.fn().mockReturnValue('signed.jwt.token') };
   const configService = {
@@ -104,6 +110,27 @@ describe('AuthService.login', () => {
         athleteProfile: null,
       },
     });
+
+    await expect(
+      service.login({ email: 'coach@example.test', password: 'CorrectPassword123!' }),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it("rejects login when the user's organisation is suspended, even with the correct password", async () => {
+    const passwordHash = await argon2.hash('CorrectPassword123!');
+    const { service, prisma } = buildService({
+      userRecord: {
+        id: 'user-1',
+        passwordHash,
+        role: Role.COACH,
+        status: UserStatus.ACTIVE,
+        mfaEnabled: false,
+        deletedAt: null,
+        coachProfile: { id: 'coach-1', organisationId: 'org-1' },
+        athleteProfile: null,
+      },
+    });
+    prisma.organisation.findUnique.mockResolvedValue({ suspendedAt: new Date() });
 
     await expect(
       service.login({ email: 'coach@example.test', password: 'CorrectPassword123!' }),

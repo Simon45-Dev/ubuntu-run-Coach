@@ -63,6 +63,8 @@ export interface Organisation {
   name: string
   type: OrganisationType
   logoUrl: string | null
+  suspendedAt: string | null
+  suspensionReason: string | null
   createdAt: string
   updatedAt: string
 }

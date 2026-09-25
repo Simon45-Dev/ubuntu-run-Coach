@@ -6,6 +6,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AvatarStorageService } from '../../common/storage/avatar-storage.service';
 import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
+import { SuspendOrganisationDto } from './dto/suspend-organisation.dto';
 
 /**
  * Wider than update()'s name/type check - a CLUB_ADMIN may not rename their
@@ -102,6 +103,34 @@ export class OrganisationsService {
     }
     await this.avatarStorage.delete(org.logoUrl);
     return this.prisma.organisation.update({ where: { id }, data: { logoUrl: null } });
+  }
+
+  /**
+   * PLATFORM_ADMIN only (route already restricted by @Roles) - locks out
+   * every user in this organisation via AuthService.assertOrganisationNotSuspended,
+   * not just the ones an admin happens to remember to suspend individually.
+   */
+  async suspend(id: string, dto: SuspendOrganisationDto) {
+    const org = await this.prisma.organisation.findFirst({ where: { id, deletedAt: null } });
+    if (!org) {
+      throw new NotFoundException('Organisation not found');
+    }
+    return this.prisma.organisation.update({
+      where: { id },
+      data: { suspendedAt: new Date(), suspensionReason: dto.reason },
+    });
+  }
+
+  /** PLATFORM_ADMIN only - route already restricted by @Roles. */
+  async reactivate(id: string) {
+    const org = await this.prisma.organisation.findFirst({ where: { id, deletedAt: null } });
+    if (!org) {
+      throw new NotFoundException('Organisation not found');
+    }
+    return this.prisma.organisation.update({
+      where: { id },
+      data: { suspendedAt: null, suspensionReason: null },
+    });
   }
 
   /** PLATFORM_ADMIN only - route already restricted by @Roles. */
