@@ -5,6 +5,7 @@ import {
   ClipboardList,
   History,
   House,
+  IdCard,
   LayoutDashboard,
   MessageCircle,
   Settings,
@@ -22,6 +23,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const isCoach = ctx?.role === 'COACH'
   const isAthlete = ctx?.role === 'ATHLETE'
   const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
+  const isClubMember = ctx?.role === 'CLUB_MEMBER'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -75,6 +77,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <NavLink to="/home" className={linkClass}>
               <House className="h-4 w-4" />
               Home
+            </NavLink>
+          )}
+          {isClubMember && (
+            <NavLink to="/membership" className={linkClass}>
+              <IdCard className="h-4 w-4" />
+              My Membership
             </NavLink>
           )}
           {isCoach && (

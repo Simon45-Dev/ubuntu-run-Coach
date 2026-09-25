@@ -7,6 +7,12 @@ import { Pencil, Plus } from 'lucide-react'
 import { getOrganisation } from '@/api/organisations'
 import { deleteCoach, listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
 import { listRoster } from '@/api/athletes'
+import {
+  deleteClubMember,
+  inviteClubMember,
+  listClubMembers,
+  resendClubMemberInvite,
+} from '@/api/clubMembers'
 import type { Coach } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
@@ -24,6 +30,8 @@ import {
 } from '@/components/ui/dialog'
 import { InviteCoachDialog } from './InviteCoachDialog'
 import { EditOrganisationDialog } from './EditOrganisationDialog'
+import { CreateClubMemberDialog } from './CreateClubMemberDialog'
+import { InviteLinkDialog } from '../roster/InviteLinkDialog'
 
 const statusVariant = {
   ACTIVE: 'good',
@@ -62,6 +70,8 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [removeId, setRemoveId] = useState<string | null>(null)
+  const [addMemberOpen, setAddMemberOpen] = useState(false)
+  const [memberInvite, setMemberInvite] = useState<{ token: string; expiresAt: string } | null>(null)
 
   const { data: organisation, isLoading: orgLoading } = useQuery({
     queryKey: ['organisation', organisationId],
@@ -77,6 +87,57 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
     queryKey: ['coach-athlete-counts', organisationId, coaches?.map((c) => c.id)],
     queryFn: () => loadAthleteCounts(coaches!),
     enabled: !!coaches && coaches.length > 0,
+  })
+  const { data: members, isLoading: membersLoading } = useQuery({
+    queryKey: ['club-members', organisationId],
+    queryFn: () => listClubMembers(organisationId!),
+    enabled: !!organisationId,
+  })
+
+  const inviteMemberMutation = useMutation({
+    mutationFn: (memberId: string) => inviteClubMember(memberId),
+    onSuccess: (result) => {
+      toast.success('Invite created')
+      setMemberInvite({ token: result.inviteToken, expiresAt: result.inviteTokenExpiresAt })
+      void queryClient.invalidateQueries({ queryKey: ['club-members', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not invite member')
+          : 'Could not invite member'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
+  const resendMemberInviteMutation = useMutation({
+    mutationFn: (memberId: string) => resendClubMemberInvite(memberId),
+    onSuccess: (result) => {
+      toast.success('Invite resent')
+      setMemberInvite({ token: result.inviteToken, expiresAt: result.inviteTokenExpiresAt })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not resend invite')
+          : 'Could not resend invite'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (memberId: string) => deleteClubMember(memberId),
+    onSuccess: () => {
+      toast.success('Member removed')
+      void queryClient.invalidateQueries({ queryKey: ['club-members', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not remove member')
+          : 'Could not remove member'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
   })
 
   const resendMutation = useMutation({
@@ -187,8 +248,107 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
         </Table>
       )}
 
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-navy">
+          Club Members{members && ` (${members.length})`}
+        </h2>
+        <Button onClick={() => setAddMemberOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Add member
+        </Button>
+      </div>
+
+      {membersLoading && <FullPageSpinner />}
+
+      {!membersLoading && members && members.length === 0 && (
+        <EmptyState
+          title="No club members yet"
+          description="Add a member to start tracking the club's roster."
+          action={<Button onClick={() => setAddMemberOpen(true)}>Add member</Button>}
+        />
+      )}
+
+      {!membersLoading && members && members.length > 0 && (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Member #</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Login status</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {members.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell className="font-mono text-navy/60">{member.membershipNumber}</TableCell>
+                <TableCell className="font-medium text-navy">
+                  {member.firstName} {member.lastName}
+                </TableCell>
+                <TableCell className="text-navy/60">{member.email}</TableCell>
+                <TableCell>
+                  {member.user ? (
+                    <Badge variant={statusVariant[member.user.status]}>{member.user.status}</Badge>
+                  ) : (
+                    <Badge variant="inactive">No login</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    {!member.user && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => inviteMemberMutation.mutate(member.id)}
+                        disabled={inviteMemberMutation.isPending}
+                      >
+                        Invite
+                      </Button>
+                    )}
+                    {member.user?.status === 'INVITED' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => resendMemberInviteMutation.mutate(member.id)}
+                        disabled={resendMemberInviteMutation.isPending}
+                      >
+                        Resend invite
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeMemberMutation.mutate(member.id)}
+                      disabled={removeMemberMutation.isPending}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
       {organisationId && (
         <InviteCoachDialog organisationId={organisationId} open={inviteOpen} onOpenChange={setInviteOpen} />
+      )}
+      {organisationId && (
+        <CreateClubMemberDialog
+          organisationId={organisationId}
+          open={addMemberOpen}
+          onOpenChange={setAddMemberOpen}
+        />
+      )}
+      {memberInvite && (
+        <InviteLinkDialog
+          open={!!memberInvite}
+          onOpenChange={(next) => !next && setMemberInvite(null)}
+          inviteToken={memberInvite.token}
+          expiresAt={memberInvite.expiresAt}
+        />
       )}
       {isAdmin && (
         <EditOrganisationDialog organisation={organisation} open={editOpen} onOpenChange={setEditOpen} />

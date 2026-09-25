@@ -1,5 +1,6 @@
 import {
   buildAthleteScopeFilter,
+  buildClubMemberScopeFilter,
   buildCoachScopeFilter,
   buildOrgScopeFilter,
   buildTrainingPlanScopeFilter,
@@ -32,6 +33,38 @@ describe('scope-filters', () => {
     it('ATHLETE without an athleteId throws', () => {
       const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE };
       expect(() => buildAthleteScopeFilter(ctx)).toThrow();
+    });
+  });
+
+  describe('buildClubMemberScopeFilter', () => {
+    it('PLATFORM_ADMIN gets no restriction', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.PLATFORM_ADMIN };
+      expect(buildClubMemberScopeFilter(ctx)).toEqual({});
+    });
+
+    it('COACH is scoped to their own organisationId, not a specific coachId', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH, organisationId: 'org-1' };
+      expect(buildClubMemberScopeFilter(ctx)).toEqual({ organisationId: 'org-1' });
+    });
+
+    it('COACH without an organisationId throws', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.COACH };
+      expect(() => buildClubMemberScopeFilter(ctx)).toThrow();
+    });
+
+    it('CLUB_MEMBER is scoped to their own id only', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.CLUB_MEMBER, clubMemberId: 'member-1' };
+      expect(buildClubMemberScopeFilter(ctx)).toEqual({ id: 'member-1' });
+    });
+
+    it('CLUB_MEMBER without a clubMemberId throws', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.CLUB_MEMBER };
+      expect(() => buildClubMemberScopeFilter(ctx)).toThrow();
+    });
+
+    it('ATHLETE has no access', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE, athleteId: 'athlete-1' };
+      expect(() => buildClubMemberScopeFilter(ctx)).toThrow();
     });
   });
 

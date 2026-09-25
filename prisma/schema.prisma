@@ -25,6 +25,7 @@ enum Role {
   PLATFORM_ADMIN
   COACH
   ATHLETE
+  CLUB_MEMBER
 }
 
 enum UserStatus {
@@ -112,8 +113,15 @@ model Organisation {
   name   String
   type   OrganisationType @default(SOLO)
 
+  /// Atomic per-club counter for ClubMember.membershipNumber - always
+  /// incremented via a single UPDATE...RETURNING inside the create
+  /// transaction (ClubMembersService.create), never read-then-written, so
+  /// concurrent member creation can never collide.
+  nextMembershipNumber Int @default(0)
+
   coaches       Coach[]
   subscriptions Subscription[]
+  clubMembers   ClubMember[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -175,6 +183,7 @@ model User {
 
   coachProfile      Coach?
   athleteProfile    Athlete?
+  clubMemberProfile ClubMember?
   refreshTokens     RefreshToken[]
   sentMessages      Message[]      @relation("SentMessages")
   receivedMessages  Message[]      @relation("ReceivedMessages")
@@ -259,6 +268,41 @@ model Athlete {
   @@index([coachId])
   @@index([organisationId])
   @@map("athletes")
+}
+
+/// A separate concept from Athlete - someone can join a club (pay dues, get
+/// a membership number) without ever being coached or on a training plan.
+/// userId is nullable: a coach/admin can capture a member's details with no
+/// login at all, or invite them to self-service via ClubMembersService.invite
+/// (mirrors AthletesService.invite) - both paths are supported.
+model ClubMember {
+  id             String       @id @default(uuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id])
+  userId         String?      @unique
+  user           User?        @relation(fields: [userId], references: [id])
+
+  /// System-generated only (ClubMembersService.create) - never accepted from
+  /// a client. Unique per club, not globally - see @@unique below.
+  membershipNumber String
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  dateOfBirth      DateTime?
+  address          String?
+
+  nextOfKinName         String?
+  nextOfKinPhone        String?
+  nextOfKinRelationship String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@unique([organisationId, membershipNumber])
+  @@index([organisationId])
+  @@map("club_members")
 }
 
 model PersonalBest {

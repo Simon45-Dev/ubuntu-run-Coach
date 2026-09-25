@@ -25,6 +25,7 @@ import { MyTeamPage } from '@/features/admin/MyTeamPage'
 import { AuditLogPage } from '@/features/admin/AuditLogPage'
 import { UsersListPage } from '@/features/admin/UsersListPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+import { MyMembershipPage } from '@/features/club-members/MyMembershipPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -32,6 +33,7 @@ function RootRedirect() {
   if (ctx?.role === 'ATHLETE' && ctx.athleteId) {
     return <Navigate to="/home" replace />
   }
+  if (ctx?.role === 'CLUB_MEMBER') return <Navigate to="/membership" replace />
   return <Navigate to="/admin" replace />
 }
 
@@ -67,6 +69,9 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute allow={['ATHLETE']} />}>
             <Route path="/home" element={<AthleteHomePage />} />
+          </Route>
+          <Route element={<ProtectedRoute allow={['CLUB_MEMBER']} />}>
+            <Route path="/membership" element={<MyMembershipPage />} />
           </Route>
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />

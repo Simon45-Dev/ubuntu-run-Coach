@@ -8,7 +8,12 @@ import { useAuth } from '@/auth/AuthProvider'
 import { AvatarInitials } from '@/components/ui/avatar'
 import { resolveAvatarUrl } from '@/lib/format'
 
-const ROLE_LABELS = { COACH: 'Coach', ATHLETE: 'Athlete', PLATFORM_ADMIN: 'Platform Admin' } as const
+const ROLE_LABELS = {
+  COACH: 'Coach',
+  ATHLETE: 'Athlete',
+  PLATFORM_ADMIN: 'Platform Admin',
+  CLUB_MEMBER: 'Club Member',
+} as const
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const { ctx, logout } = useAuth()

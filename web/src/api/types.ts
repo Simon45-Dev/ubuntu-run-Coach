@@ -2,7 +2,7 @@
 // Kept as string-literal unions (not TS `enum`) - the project's tsconfig sets
 // erasableSyntaxOnly, which disallows real enums.
 
-export const ROLES = ['PLATFORM_ADMIN', 'COACH', 'ATHLETE'] as const
+export const ROLES = ['PLATFORM_ADMIN', 'COACH', 'ATHLETE', 'CLUB_MEMBER'] as const
 export type Role = (typeof ROLES)[number]
 
 export const USER_STATUSES = ['INVITED', 'ACTIVE', 'SUSPENDED', 'DEACTIVATED'] as const
@@ -43,6 +43,7 @@ export interface AuthContext {
   organisationId?: string
   coachId?: string
   athleteId?: string
+  clubMemberId?: string
 }
 
 export interface PublicUser {
@@ -88,6 +89,25 @@ export interface Athlete {
   updatedAt: string
   user: { id: string; email: string; name: string; status: UserStatus }
   coach: { id: string; user: { id: string; name: string } } | null
+}
+
+export interface ClubMember {
+  id: string
+  organisationId: string
+  userId: string | null
+  membershipNumber: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string | null
+  dateOfBirth: string | null
+  address: string | null
+  nextOfKinName: string | null
+  nextOfKinPhone: string | null
+  nextOfKinRelationship: string | null
+  createdAt: string
+  updatedAt: string
+  user: { id: string; email: string; name: string; status: UserStatus } | null
 }
 
 export interface GroupMembership {

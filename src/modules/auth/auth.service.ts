@@ -72,7 +72,7 @@ export class AuthService {
   async login(dto: LoginDto): Promise<TokenPair> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: { coachProfile: true, athleteProfile: true },
+      include: { coachProfile: true, athleteProfile: true, clubMemberProfile: true },
     });
 
     // Constant-shape failure: don't reveal whether the email exists.
@@ -110,8 +110,12 @@ export class AuthService {
     const authContext = this.buildAuthContext(
       user,
       user.coachProfile?.id,
-      user.coachProfile?.organisationId ?? user.athleteProfile?.organisationId ?? undefined,
+      user.coachProfile?.organisationId ??
+        user.athleteProfile?.organisationId ??
+        user.clubMemberProfile?.organisationId ??
+        undefined,
       user.athleteProfile?.id,
+      user.clubMemberProfile?.id,
     );
     return this.issueTokens(authContext);
   }
@@ -131,7 +135,7 @@ export class AuthService {
         status: UserStatus.INVITED,
         inviteTokenExpiresAt: { gt: new Date() },
       },
-      include: { coachProfile: true, athleteProfile: true },
+      include: { coachProfile: true, athleteProfile: true, clubMemberProfile: true },
     });
     if (!user) {
       throw new UnauthorizedException('Invalid or expired invite');
@@ -147,14 +151,18 @@ export class AuthService {
         inviteTokenExpiresAt: null,
         lastLoginAt: new Date(),
       },
-      include: { coachProfile: true, athleteProfile: true },
+      include: { coachProfile: true, athleteProfile: true, clubMemberProfile: true },
     });
 
     const authContext = this.buildAuthContext(
       updated,
       updated.coachProfile?.id,
-      updated.coachProfile?.organisationId ?? updated.athleteProfile?.organisationId ?? undefined,
+      updated.coachProfile?.organisationId ??
+        updated.athleteProfile?.organisationId ??
+        updated.clubMemberProfile?.organisationId ??
+        undefined,
       updated.athleteProfile?.id,
+      updated.clubMemberProfile?.id,
     );
     return this.issueTokens(authContext);
   }
@@ -194,7 +202,7 @@ export class AuthService {
         passwordResetTokenHash: tokenHash,
         passwordResetTokenExpiresAt: { gt: new Date() },
       },
-      include: { coachProfile: true, athleteProfile: true },
+      include: { coachProfile: true, athleteProfile: true, clubMemberProfile: true },
     });
     if (!user) {
       throw new UnauthorizedException('Invalid or expired reset link');
@@ -209,14 +217,18 @@ export class AuthService {
         passwordResetTokenExpiresAt: null,
         lastLoginAt: new Date(),
       },
-      include: { coachProfile: true, athleteProfile: true },
+      include: { coachProfile: true, athleteProfile: true, clubMemberProfile: true },
     });
 
     const authContext = this.buildAuthContext(
       updated,
       updated.coachProfile?.id,
-      updated.coachProfile?.organisationId ?? updated.athleteProfile?.organisationId ?? undefined,
+      updated.coachProfile?.organisationId ??
+        updated.athleteProfile?.organisationId ??
+        updated.clubMemberProfile?.organisationId ??
+        undefined,
       updated.athleteProfile?.id,
+      updated.clubMemberProfile?.id,
     );
     return this.issueTokens(authContext);
   }
@@ -225,7 +237,9 @@ export class AuthService {
     const tokenHash = this.hashToken(rawRefreshToken);
     const stored = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },
-      include: { user: { include: { coachProfile: true, athleteProfile: true } } },
+      include: {
+        user: { include: { coachProfile: true, athleteProfile: true, clubMemberProfile: true } },
+      },
     });
 
     if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
@@ -247,8 +261,12 @@ export class AuthService {
     const authContext = this.buildAuthContext(
       user,
       user.coachProfile?.id,
-      user.coachProfile?.organisationId ?? user.athleteProfile?.organisationId ?? undefined,
+      user.coachProfile?.organisationId ??
+        user.athleteProfile?.organisationId ??
+        user.clubMemberProfile?.organisationId ??
+        undefined,
       user.athleteProfile?.id,
+      user.clubMemberProfile?.id,
     );
     return this.issueTokens(authContext);
   }
@@ -309,6 +327,7 @@ export class AuthService {
     coachId?: string,
     organisationId?: string,
     athleteId?: string,
+    clubMemberId?: string,
   ): AuthContext {
     return {
       userId: user.id,
@@ -316,6 +335,7 @@ export class AuthService {
       organisationId,
       coachId,
       athleteId,
+      clubMemberId,
     };
   }
 
