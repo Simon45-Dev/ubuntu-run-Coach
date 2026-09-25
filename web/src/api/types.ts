@@ -62,6 +62,7 @@ export interface Organisation {
   id: string
   name: string
   type: OrganisationType
+  logoUrl: string | null
   createdAt: string
   updatedAt: string
 }

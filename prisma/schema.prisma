@@ -110,9 +110,13 @@ enum ConsentType {
 /// organisations, but the shape supports multiple coaches per org (Stage 7:
 /// clubs / larger coaching businesses) without a later schema rewrite.
 model Organisation {
-  id     String           @id @default(uuid())
-  name   String
-  type   OrganisationType @default(SOLO)
+  id      String           @id @default(uuid())
+  name    String
+  type    OrganisationType @default(SOLO)
+  /// Custom branding shown in place of the default Ubuntu Run logo for this
+  /// organisation's own users - stored the same way as User.avatarUrl (see
+  /// AvatarStorageService), just reused for a different owner.
+  logoUrl String?
 
   /// Atomic per-club counter for ClubMember.membershipNumber - always
   /// incremented via a single UPDATE...RETURNING inside the create

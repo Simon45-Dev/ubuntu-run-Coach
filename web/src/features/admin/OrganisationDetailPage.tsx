@@ -3,9 +3,9 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { Download, Pencil, Plus, Upload, Wallet } from 'lucide-react'
+import { Building2, Download, Pencil, Plus, Upload, Wallet, X } from 'lucide-react'
 import { utils, writeFile } from 'xlsx'
-import { getOrganisation } from '@/api/organisations'
+import { deleteOrganisationLogo, getOrganisation, uploadOrganisationLogo } from '@/api/organisations'
 import { deleteCoach, listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
 import { listRoster } from '@/api/athletes'
 import {
@@ -30,7 +30,7 @@ import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, resolveAvatarUrl } from '@/lib/format'
 import {
   Dialog,
   DialogContent,
@@ -79,6 +79,9 @@ const statusVariant = {
   DEACTIVATED: 'inactive',
 } as const
 
+const LOGO_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const LOGO_MAX_BYTES = 5_000_000
+
 /**
  * A COACH (not PLATFORM_ADMIN) can only list their own roster - GET
  * /coaches/:coachId/athletes 403s for a peer coach's id (OrgScopeGuard's
@@ -107,6 +110,9 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
   const { ctx } = useAuth()
   const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
   const isClubAdmin = ctx?.role === 'CLUB_ADMIN'
+  const isOwnCoach = ctx?.role === 'COACH' && ctx.organisationId === organisationId
+  const canManageLogo = isAdmin || isOwnCoach || isClubAdmin
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteClubAdminOpen, setInviteClubAdminOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -255,14 +261,68 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
     },
   })
 
+  const uploadLogoMutation = useMutation({
+    mutationFn: () => uploadOrganisationLogo(organisationId!, logoFile!),
+    onSuccess: () => {
+      toast.success('Logo updated')
+      setLogoFile(null)
+      void queryClient.invalidateQueries({ queryKey: ['organisation', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not upload logo')
+          : 'Could not upload logo'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
+  const deleteLogoMutation = useMutation({
+    mutationFn: () => deleteOrganisationLogo(organisationId!),
+    onSuccess: () => {
+      toast.success('Logo removed')
+      void queryClient.invalidateQueries({ queryKey: ['organisation', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not remove logo')
+          : 'Could not remove logo'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
   if (orgLoading || !organisation) return <FullPageSpinner />
+
+  function onLogoFileChange(file: File | null) {
+    if (file && !LOGO_ALLOWED_TYPES.includes(file.type)) {
+      toast.error('Please choose a JPEG, PNG, or WebP image')
+      return
+    }
+    if (file && file.size > LOGO_MAX_BYTES) {
+      toast.error('Image must be smaller than 5MB')
+      return
+    }
+    setLogoFile(file)
+  }
+
+  const logoSrc = resolveAvatarUrl(organisation.logoUrl)
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-navy">{organisation.name}</h1>
-          <p className="text-sm text-navy/60">{organisation.type}</p>
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-navy/10 bg-mist">
+            {logoSrc ? (
+              <img src={logoSrc} alt={`${organisation.name} logo`} className="h-full w-full object-contain" />
+            ) : (
+              <Building2 className="h-6 w-6 text-navy/30" />
+            )}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-navy">{organisation.name}</h1>
+            <p className="text-sm text-navy/60">{organisation.type}</p>
+          </div>
         </div>
         {isAdmin && (
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
@@ -271,6 +331,36 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
           </Button>
         )}
       </div>
+
+      {canManageLogo && (
+        <div className="flex items-center gap-2">
+          <Input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="max-w-xs"
+            onChange={(e) => onLogoFileChange(e.target.files?.[0] ?? null)}
+          />
+          <Button
+            size="sm"
+            onClick={() => uploadLogoMutation.mutate()}
+            disabled={!logoFile || uploadLogoMutation.isPending}
+          >
+            <Upload className="h-4 w-4" />
+            {uploadLogoMutation.isPending ? 'Uploading...' : 'Upload logo'}
+          </Button>
+          {organisation.logoUrl && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => deleteLogoMutation.mutate()}
+              disabled={deleteLogoMutation.isPending}
+            >
+              <X className="h-4 w-4" />
+              Remove
+            </Button>
+          )}
+        </div>
+      )}
 
       {!isClubAdmin && (
         <>

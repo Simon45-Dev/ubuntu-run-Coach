@@ -3,12 +3,30 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { AvatarStorageService } from '../../common/storage/avatar-storage.service';
 import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
 
+/**
+ * Wider than update()'s name/type check - a CLUB_ADMIN may not rename their
+ * club or change its type, but branding isn't "coaching data" the way org
+ * settings are, so they're allowed to manage the logo alongside COACH
+ * (own org) and PLATFORM_ADMIN (any org).
+ */
+function assertCanManageLogo(ctx: AuthContext, id: string): void {
+  if (ctx.role === Role.PLATFORM_ADMIN) return;
+  if ((ctx.role === Role.COACH || ctx.role === Role.CLUB_ADMIN) && ctx.organisationId === id) {
+    return;
+  }
+  throw new ForbiddenException();
+}
+
 @Injectable()
 export class OrganisationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly avatarStorage: AvatarStorageService,
+  ) {}
 
   /**
    * PLATFORM_ADMIN only (route already restricted by @Roles). No
@@ -57,6 +75,33 @@ export class OrganisationsService {
       where: { id },
       data: { name: dto.name, type: dto.type },
     });
+  }
+
+  async uploadLogo(ctx: AuthContext, id: string, buffer: Buffer, mimeType: string) {
+    assertCanManageLogo(ctx, id);
+    const org = await this.prisma.organisation.findFirst({
+      where: { id, deletedAt: null },
+      select: { logoUrl: true },
+    });
+    if (!org) {
+      throw new NotFoundException('Organisation not found');
+    }
+    await this.avatarStorage.delete(org.logoUrl);
+    const logoUrl = await this.avatarStorage.save(buffer, mimeType);
+    return this.prisma.organisation.update({ where: { id }, data: { logoUrl } });
+  }
+
+  async deleteLogo(ctx: AuthContext, id: string) {
+    assertCanManageLogo(ctx, id);
+    const org = await this.prisma.organisation.findFirst({
+      where: { id, deletedAt: null },
+      select: { logoUrl: true },
+    });
+    if (!org) {
+      throw new NotFoundException('Organisation not found');
+    }
+    await this.avatarStorage.delete(org.logoUrl);
+    return this.prisma.organisation.update({ where: { id }, data: { logoUrl: null } });
   }
 
   /** PLATFORM_ADMIN only - route already restricted by @Roles. */

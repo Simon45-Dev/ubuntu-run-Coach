@@ -29,9 +29,15 @@ export interface AvatarObject {
  * log), so local dev needs no setup and callers never need to know which
  * mode is active.
  *
- * The bucket is expected to be PRIVATE - avatars are served back out through
+ * Despite the name (kept for the existing user-avatar call sites and the
+ * `avatars/` key prefix/proxy route), this is a generic small-image store -
+ * OrganisationsService reuses it unchanged for organisation logos, since
+ * save/delete/getObject take a plain buffer/mimeType/filename with nothing
+ * user-specific about them.
+ *
+ * The bucket is expected to be PRIVATE - images are served back out through
  * AvatarsController's proxy route rather than a public bucket URL, so no
- * hosting provider requires a card on file just to view a profile picture.
+ * hosting provider requires a card on file just to view one.
  */
 @Injectable()
 export class AvatarStorageService {
@@ -51,7 +57,7 @@ export class AvatarStorageService {
         : null;
   }
 
-  /** Returns the URL to store as avatarUrl - relative in both modes, resolved by the frontend against the API origin. */
+  /** Returns the URL to store as avatarUrl/logoUrl - relative in both modes, resolved by the frontend against the API origin. */
   async save(buffer: Buffer, mimeType: string): Promise<string> {
     const filename = `${randomUUID()}${EXT_BY_MIME[mimeType]}`;
 
@@ -87,7 +93,7 @@ export class AvatarStorageService {
     }
   }
 
-  /** Streams an avatar back from the bucket for AvatarsController - null when not in remote mode (nothing to proxy) or not found. */
+  /** Streams an image back from the bucket for AvatarsController - null when not in remote mode (nothing to proxy) or not found. */
   async getObject(filename: string): Promise<AvatarObject | null> {
     if (!this.s3) return null;
     try {

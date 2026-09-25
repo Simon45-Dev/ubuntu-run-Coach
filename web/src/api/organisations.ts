@@ -30,3 +30,15 @@ export async function updateOrganisation(id: string, input: UpdateOrganisationIn
   const res = await apiClient.patch<Organisation>(`/organisations/${id}`, input)
   return res.data
 }
+
+export async function uploadOrganisationLogo(id: string, file: File): Promise<Organisation> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const res = await apiClient.post<Organisation>(`/organisations/${id}/logo`, formData)
+  return res.data
+}
+
+export async function deleteOrganisationLogo(id: string): Promise<Organisation> {
+  const res = await apiClient.delete<Organisation>(`/organisations/${id}/logo`)
+  return res.data
+}

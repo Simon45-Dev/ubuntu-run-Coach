@@ -1,7 +1,7 @@
 import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { AvatarStorageService } from './avatar-storage.service';
+import { AvatarStorageService } from '../../common/storage/avatar-storage.service';
 
 /**
  * Unauthenticated on purpose - avatars are non-sensitive, UUID-named, and

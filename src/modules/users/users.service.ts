@@ -6,7 +6,7 @@ import { Role } from '../../common/enums/role.enum';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
-import { AvatarStorageService } from './avatar-storage.service';
+import { AvatarStorageService } from '../../common/storage/avatar-storage.service';
 
 const PUBLIC_USER_SELECT = {
   id: true,

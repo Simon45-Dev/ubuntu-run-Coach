@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   Bell,
   Building2,
@@ -14,8 +15,10 @@ import {
   Users,
   UsersRound,
 } from 'lucide-react'
+import { getOrganisation } from '@/api/organisations'
 import { useAuth } from '@/auth/AuthProvider'
 import logo from '@/assets/logo.png'
+import { resolveAvatarUrl } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -25,6 +28,15 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
   const isClubMember = ctx?.role === 'CLUB_MEMBER'
   const isClubAdmin = ctx?.role === 'CLUB_ADMIN'
+
+  // PLATFORM_ADMIN has no organisationId, so always sees the default mark -
+  // custom branding is a per-organisation thing, not a platform-wide one.
+  const { data: organisation } = useQuery({
+    queryKey: ['organisation', ctx?.organisationId],
+    queryFn: () => getOrganisation(ctx!.organisationId!),
+    enabled: !!ctx?.organisationId,
+  })
+  const orgLogo = resolveAvatarUrl(organisation?.logoUrl)
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -42,7 +54,11 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <img src={logo} alt="Ubuntu Run" className="mb-6 h-auto w-full px-2" />
+        <img
+          src={orgLogo ?? logo}
+          alt={organisation?.name ?? 'Ubuntu Run'}
+          className="mb-6 h-auto w-full px-2"
+        />
         <nav className="flex flex-1 flex-col gap-1" onClick={onClose}>
           {isAdmin && (
             <NavLink to="/admin" end className={linkClass}>

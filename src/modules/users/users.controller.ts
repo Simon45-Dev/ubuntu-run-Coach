@@ -16,7 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { EXT_BY_MIME } from './avatar-storage.service';
+import { EXT_BY_MIME } from '../../common/storage/avatar-storage.service';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';

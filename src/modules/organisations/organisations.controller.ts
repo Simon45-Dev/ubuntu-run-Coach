@@ -1,8 +1,24 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UnsupportedMediaTypeException,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { OrganisationsService } from './organisations.service';
 import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
+import { EXT_BY_MIME } from '../../common/storage/avatar-storage.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { OrgScopeGuard } from '../../common/guards/org-scope.guard';
@@ -46,5 +62,37 @@ export class OrganisationsController {
     @Body() dto: UpdateOrganisationDto,
   ) {
     return this.organisationsService.update(ctx, id, dto);
+  }
+
+  @Post(':id/logo')
+  @ScopeResource('organisation')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5_000_000 },
+      fileFilter: (_req, file, cb) => {
+        if (EXT_BY_MIME[file.mimetype]) {
+          cb(null, true);
+          return;
+        }
+        cb(new UnsupportedMediaTypeException('Only JPEG, PNG, or WebP images are allowed'), false);
+      },
+    }),
+  )
+  uploadLogo(
+    @CurrentUser() ctx: AuthContext,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    return this.organisationsService.uploadLogo(ctx, id, file.buffer, file.mimetype);
+  }
+
+  @Delete(':id/logo')
+  @ScopeResource('organisation')
+  deleteLogo(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
+    return this.organisationsService.deleteLogo(ctx, id);
   }
 }
