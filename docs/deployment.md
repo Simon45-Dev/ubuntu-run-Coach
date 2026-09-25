@@ -37,10 +37,12 @@ for that role).
   preserve deliverability. Fixing this needs a real domain, verified in
   Brevo with DKIM/SPF/DMARC DNS records - **deliberately deferred until real
   launch**, not done for the pilot.
-- **No CI workflow active**: `.github/workflows/ci.yml` exists locally but
-  isn't pushed - the git credential used for the first push lacked GitHub's
-  `workflow` OAuth scope, which is required to push any file under
-  `.github/workflows/`. See "Gotchas" below to re-add it.
+- **No CI workflow active**: `.github/workflows/ci.yml` exists locally
+  (fixed and expanded - it originally targeted a `main` branch this repo
+  never had, and only tested the backend; it now targets `master` and runs
+  the frontend's lint/test/build too) but still isn't pushed - the git
+  credential in use lacks GitHub's `workflow` OAuth scope, required to push
+  any file under `.github/workflows/`. See "Gotchas" below to re-add it.
 
 ## 1. Database - Neon
 
