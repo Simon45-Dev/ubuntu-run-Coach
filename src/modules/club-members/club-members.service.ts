@@ -123,6 +123,50 @@ export class ClubMembersService {
     });
   }
 
+  /**
+   * COACH/PLATFORM_ADMIN/CLUB_ADMIN only (enforced by the controller's
+   * @Roles) - aggregate org-wide figures, including revenue, aren't
+   * appropriate for a self-service CLUB_MEMBER to see. Membership-status
+   * counts are computed in JS via getMembershipStatus rather than in SQL, to
+   * guarantee they use the exact same 30-day-window logic as the roster
+   * badges and the expiry-reminder job - matches sendExpiryReminders' style.
+   */
+  async getStats(organisationId: string) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    const [totalMembers, members, paymentsAgg] = await Promise.all([
+      this.prisma.clubMember.count({ where: { organisationId, deletedAt: null } }),
+      this.prisma.clubMember.findMany({
+        where: { organisationId, deletedAt: null },
+        select: { membershipExpiryDate: true },
+      }),
+      this.prisma.clubMemberPayment.aggregate({
+        where: {
+          paidAt: { gte: startOfMonth, lt: startOfNextMonth },
+          clubMember: { organisationId, deletedAt: null },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    let expiringSoonCount = 0;
+    let expiredCount = 0;
+    for (const member of members) {
+      const status = getMembershipStatus(member.membershipExpiryDate, now);
+      if (status === 'EXPIRING_SOON') expiringSoonCount++;
+      if (status === 'EXPIRED') expiredCount++;
+    }
+
+    return {
+      totalMembers,
+      expiringSoonCount,
+      expiredCount,
+      paymentsThisMonthTotal: (paymentsAgg._sum.amount ?? 0).toString(),
+    };
+  }
+
   /** Any coach in the club (not tied to one specific coach), or PLATFORM_ADMIN. */
   async findAllForOrg(ctx: AuthContext, organisationId: string) {
     return this.prisma.clubMember.findMany({

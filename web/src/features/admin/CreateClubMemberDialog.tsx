@@ -59,6 +59,7 @@ export function CreateClubMemberDialog({
     onSuccess: (member) => {
       toast.success(`${member.firstName} added - membership number ${member.membershipNumber}`)
       void queryClient.invalidateQueries({ queryKey: ['club-members', organisationId] })
+      void queryClient.invalidateQueries({ queryKey: ['club-members-stats', organisationId] })
       reset()
       onOpenChange(false)
     },

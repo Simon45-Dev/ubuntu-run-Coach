@@ -33,6 +33,7 @@ export function ImportClubMembersCsvDialog({
     onSuccess: (members) => {
       toast.success(`Imported ${members.length} member${members.length === 1 ? '' : 's'}`)
       void queryClient.invalidateQueries({ queryKey: ['club-members', organisationId] })
+      void queryClient.invalidateQueries({ queryKey: ['club-members-stats', organisationId] })
       setFile(null)
       setErrors(null)
       onOpenChange(false)

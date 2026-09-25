@@ -78,6 +78,7 @@ export function ClubMemberPaymentsDialog({
     onSuccess: () => {
       toast.success('Payment recorded')
       void queryClient.invalidateQueries({ queryKey: ['club-member-payments', memberId] })
+      void queryClient.invalidateQueries({ queryKey: ['club-members-stats', member?.organisationId] })
       reset({ amount: undefined, method: 'CASH', paidAt: new Date().toISOString().slice(0, 10), note: '' })
     },
     onError: (err) => toast.error(errorMessage(err, 'Could not record payment')),
@@ -88,6 +89,7 @@ export function ClubMemberPaymentsDialog({
     onSuccess: () => {
       toast.success('Payment deleted')
       void queryClient.invalidateQueries({ queryKey: ['club-member-payments', memberId] })
+      void queryClient.invalidateQueries({ queryKey: ['club-members-stats', member?.organisationId] })
     },
     onError: (err) => toast.error(errorMessage(err, 'Could not delete payment')),
   })

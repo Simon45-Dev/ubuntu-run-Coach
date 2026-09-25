@@ -361,4 +361,88 @@ describe('Club Members (e2e)', () => {
       .expect(200);
     expect(afterDelete.body).toHaveLength(0);
   });
+
+  it("reports member counts by status and this month's payment total, but not to a self-service member", async () => {
+    const coach = await registerCoach(app);
+
+    const active = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ ...MEMBER_INPUT, email: 'active@example.test' })
+      .expect(201);
+    // membershipExpiryDate isn't settable on create (coach/admin-only field,
+    // not part of CreateClubMemberDto) - set it via update instead.
+    await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${active.body.id}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ membershipExpiryDate: '2099-01-01' })
+      .expect(200);
+
+    const expiringSoon = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ ...MEMBER_INPUT, email: 'expiring@example.test' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${expiringSoon.body.id}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({
+        membershipExpiryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10),
+      })
+      .expect(200);
+
+    const expired = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ ...MEMBER_INPUT, email: 'expired@example.test' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${expired.body.id}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ membershipExpiryDate: '2020-01-01' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/club-members/${active.body.id}/payments`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ amount: 150, method: 'EFT', paidAt: new Date().toISOString() })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/v1/club-members/${expired.body.id}/payments`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ amount: 50, method: 'CASH', paidAt: new Date().toISOString() })
+      .expect(201);
+    // A payment from last year shouldn't count towards this month's total.
+    await request(app.getHttpServer())
+      .post(`/api/v1/club-members/${active.body.id}/payments`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ amount: 999, method: 'CASH', paidAt: '2020-01-01' })
+      .expect(201);
+
+    const statsRes = await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${coach.organisationId}/club-members/stats`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+    expect(statsRes.body.totalMembers).toBe(3);
+    expect(statsRes.body.expiringSoonCount).toBe(1);
+    expect(statsRes.body.expiredCount).toBe(1);
+    expect(Number(statsRes.body.paymentsThisMonthTotal)).toBe(200);
+
+    // A self-service club member gets 403 - aggregate org figures aren't
+    // for them, even for their own club.
+    const inviteRes = await request(app.getHttpServer())
+      .post(`/api/v1/club-members/${active.body.id}/invite`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(201);
+    const acceptRes = await request(app.getHttpServer())
+      .post('/api/v1/auth/accept-invite')
+      .send({ token: inviteRes.body.inviteToken, password: 'MemberPassword123!' })
+      .expect(200);
+    await request(app.getHttpServer())
+      .get(`/api/v1/organisations/${coach.organisationId}/club-members/stats`)
+      .set('Authorization', `Bearer ${acceptRes.body.accessToken}`)
+      .expect(403);
+  });
 });

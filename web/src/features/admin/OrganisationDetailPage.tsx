@@ -15,6 +15,7 @@ import {
 } from '@/api/clubAdmins'
 import {
   deleteClubMember,
+  getClubMemberStats,
   inviteClubMember,
   listClubMembers,
   resendClubMemberInvite,
@@ -28,6 +29,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatCurrency } from '@/lib/format'
 import {
   Dialog,
   DialogContent,
@@ -141,6 +144,11 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
     queryFn: () => listClubMembers(organisationId!),
     enabled: !!organisationId,
   })
+  const { data: memberStats } = useQuery({
+    queryKey: ['club-members-stats', organisationId],
+    queryFn: () => getClubMemberStats(organisationId!),
+    enabled: !!organisationId,
+  })
 
   const inviteMemberMutation = useMutation({
     mutationFn: (memberId: string) => inviteClubMember(memberId),
@@ -178,6 +186,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
     onSuccess: () => {
       toast.success('Member removed')
       void queryClient.invalidateQueries({ queryKey: ['club-members', organisationId] })
+      void queryClient.invalidateQueries({ queryKey: ['club-members-stats', organisationId] })
     },
     onError: (err) => {
       const message =
@@ -390,6 +399,36 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
             </Table>
           )}
         </>
+      )}
+
+      {memberStats && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Club Totals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div>
+                <p className="text-xl font-bold text-navy">{memberStats.totalMembers}</p>
+                <p className="text-xs text-navy/50">Members</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-navy">{memberStats.expiringSoonCount}</p>
+                <p className="text-xs text-navy/50">Expiring soon</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-navy">{memberStats.expiredCount}</p>
+                <p className="text-xs text-navy/50">Expired</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold text-navy">
+                  {formatCurrency(memberStats.paymentsThisMonthTotal)}
+                </p>
+                <p className="text-xs text-navy/50">Collected this month</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="flex items-center justify-between">

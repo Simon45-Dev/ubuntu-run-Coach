@@ -62,6 +62,13 @@ export class ClubMembersController {
     return this.clubMembersService.findAllForOrg(ctx, organisationId);
   }
 
+  @Get('organisations/:organisationId/club-members/stats')
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
+  @ScopeResource('organisation', 'organisationId')
+  getStats(@Param('organisationId') organisationId: string) {
+    return this.clubMembersService.getStats(organisationId);
+  }
+
   @Get('club-members/:id')
   findOne(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
     return this.clubMembersService.findOne(ctx, id);

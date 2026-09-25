@@ -63,6 +63,18 @@ export async function resendClubMemberInvite(id: string): Promise<InviteClubMemb
   return res.data
 }
 
+export interface ClubMemberStats {
+  totalMembers: number
+  expiringSoonCount: number
+  expiredCount: number
+  paymentsThisMonthTotal: string
+}
+
+export async function getClubMemberStats(organisationId: string): Promise<ClubMemberStats> {
+  const res = await apiClient.get<ClubMemberStats>(`/organisations/${organisationId}/club-members/stats`)
+  return res.data
+}
+
 export async function importClubMembersCsv(organisationId: string, file: File): Promise<ClubMember[]> {
   const formData = new FormData()
   formData.append('file', file)

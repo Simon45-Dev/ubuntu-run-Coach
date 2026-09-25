@@ -86,6 +86,7 @@ export function EditClubMemberDialog({
     onSuccess: () => {
       toast.success('Member updated')
       void queryClient.invalidateQueries({ queryKey: ['club-members', organisationId] })
+      void queryClient.invalidateQueries({ queryKey: ['club-members-stats', organisationId] })
       onOpenChange(false)
     },
     onError: (err) => {
