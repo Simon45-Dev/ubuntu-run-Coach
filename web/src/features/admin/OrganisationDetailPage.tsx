@@ -9,6 +9,11 @@ import { getOrganisation } from '@/api/organisations'
 import { deleteCoach, listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
 import { listRoster } from '@/api/athletes'
 import {
+  deleteClubAdmin,
+  listClubAdminsForOrganisation,
+  resendClubAdminInvite,
+} from '@/api/clubAdmins'
+import {
   deleteClubMember,
   inviteClubMember,
   listClubMembers,
@@ -32,6 +37,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { InviteCoachDialog } from './InviteCoachDialog'
+import { InviteClubAdminDialog } from './InviteClubAdminDialog'
 import { EditOrganisationDialog } from './EditOrganisationDialog'
 import { CreateClubMemberDialog } from './CreateClubMemberDialog'
 import { EditClubMemberDialog } from './EditClubMemberDialog'
@@ -96,9 +102,12 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
   const queryClient = useQueryClient()
   const { ctx } = useAuth()
   const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
+  const isClubAdmin = ctx?.role === 'CLUB_ADMIN'
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteClubAdminOpen, setInviteClubAdminOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [removeId, setRemoveId] = useState<string | null>(null)
+  const [removeClubAdminId, setRemoveClubAdminId] = useState<string | null>(null)
   const [addMemberOpen, setAddMemberOpen] = useState(false)
   const [importMembersOpen, setImportMembersOpen] = useState(false)
   const [memberInvite, setMemberInvite] = useState<{ token: string; expiresAt: string } | null>(null)
@@ -115,12 +124,17 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
   const { data: coaches, isLoading: coachesLoading } = useQuery({
     queryKey: ['coaches', organisationId],
     queryFn: () => listCoachesForOrganisation(organisationId!),
-    enabled: !!organisationId,
+    enabled: !!organisationId && !isClubAdmin,
   })
   const { data: athleteCounts } = useQuery({
     queryKey: ['coach-athlete-counts', organisationId, coaches?.map((c) => c.id)],
     queryFn: () => loadAthleteCounts(coaches!),
     enabled: !!coaches && coaches.length > 0,
+  })
+  const { data: clubAdmins, isLoading: clubAdminsLoading } = useQuery({
+    queryKey: ['club-admins', organisationId],
+    queryFn: () => listClubAdminsForOrganisation(organisationId!),
+    enabled: !!organisationId && !isClubAdmin,
   })
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ['club-members', organisationId],
@@ -202,6 +216,35 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
     },
   })
 
+  const resendClubAdminMutation = useMutation({
+    mutationFn: (id: string) => resendClubAdminInvite(id),
+    onSuccess: () => toast.success('Invite resent'),
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ?? 'Could not resend invite')
+          : 'Could not resend invite'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
+  const removeClubAdminMutation = useMutation({
+    mutationFn: (id: string) => deleteClubAdmin(id),
+    onSuccess: () => {
+      toast.success('Club admin removed')
+      setRemoveClubAdminId(null)
+      void queryClient.invalidateQueries({ queryKey: ['club-admins', organisationId] })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof AxiosError
+          ? ((err.response?.data as { message?: string } | undefined)?.message ??
+            'Could not remove club admin')
+          : 'Could not remove club admin'
+      toast.error(Array.isArray(message) ? message.join(', ') : message)
+    },
+  })
+
   if (orgLoading || !organisation) return <FullPageSpinner />
 
   return (
@@ -219,67 +262,134 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-navy">Coaches</h2>
-        <Button onClick={() => setInviteOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Invite coach
-        </Button>
-      </div>
+      {!isClubAdmin && (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-navy">Coaches</h2>
+            <Button onClick={() => setInviteOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Invite coach
+            </Button>
+          </div>
 
-      {coachesLoading && <FullPageSpinner />}
+          {coachesLoading && <FullPageSpinner />}
 
-      {!coachesLoading && coaches && coaches.length === 0 && (
-        <EmptyState
-          title="No coaches yet"
-          description="Invite a coach to let them start onboarding athletes."
-          action={<Button onClick={() => setInviteOpen(true)}>Invite coach</Button>}
-        />
-      )}
+          {!coachesLoading && coaches && coaches.length === 0 && (
+            <EmptyState
+              title="No coaches yet"
+              description="Invite a coach to let them start onboarding athletes."
+              action={<Button onClick={() => setInviteOpen(true)}>Invite coach</Button>}
+            />
+          )}
 
-      {!coachesLoading && coaches && coaches.length > 0 && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Athletes</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {coaches.map((coach) => (
-              <TableRow key={coach.id}>
-                <TableCell className="font-medium text-navy">{coach.user.name}</TableCell>
-                <TableCell className="text-navy/60">{coach.user.email}</TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant[coach.user.status]}>{coach.user.status}</Badge>
-                </TableCell>
-                <TableCell className="text-navy/60">{athleteCounts?.[coach.id] ?? '-'}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    {coach.user.status === 'INVITED' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => resendMutation.mutate(coach.id)}
-                        disabled={resendMutation.isPending}
-                      >
-                        Resend invite
-                      </Button>
-                    )}
-                    {isAdmin && (
-                      <Button variant="outline" size="sm" onClick={() => setRemoveId(coach.id)}>
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+          {!coachesLoading && coaches && coaches.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Athletes</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {coaches.map((coach) => (
+                  <TableRow key={coach.id}>
+                    <TableCell className="font-medium text-navy">{coach.user.name}</TableCell>
+                    <TableCell className="text-navy/60">{coach.user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant[coach.user.status]}>{coach.user.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-navy/60">{athleteCounts?.[coach.id] ?? '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {coach.user.status === 'INVITED' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => resendMutation.mutate(coach.id)}
+                            disabled={resendMutation.isPending}
+                          >
+                            Resend invite
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button variant="outline" size="sm" onClick={() => setRemoveId(coach.id)}>
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-navy">Club Admins</h2>
+            <Button onClick={() => setInviteClubAdminOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Invite club admin
+            </Button>
+          </div>
+
+          {clubAdminsLoading && <FullPageSpinner />}
+
+          {!clubAdminsLoading && clubAdmins && clubAdmins.length === 0 && (
+            <EmptyState
+              title="No club admins yet"
+              description="Invite someone to manage this club's membership without coaching access."
+              action={<Button onClick={() => setInviteClubAdminOpen(true)}>Invite club admin</Button>}
+            />
+          )}
+
+          {!clubAdminsLoading && clubAdmins && clubAdmins.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clubAdmins.map((clubAdmin) => (
+                  <TableRow key={clubAdmin.id}>
+                    <TableCell className="font-medium text-navy">{clubAdmin.user.name}</TableCell>
+                    <TableCell className="text-navy/60">{clubAdmin.user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant[clubAdmin.user.status]}>{clubAdmin.user.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {clubAdmin.user.status === 'INVITED' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => resendClubAdminMutation.mutate(clubAdmin.id)}
+                            disabled={resendClubAdminMutation.isPending}
+                          >
+                            Resend invite
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setRemoveClubAdminId(clubAdmin.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </>
       )}
 
       <div className="flex items-center justify-between">
@@ -438,6 +548,13 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
         <InviteCoachDialog organisationId={organisationId} open={inviteOpen} onOpenChange={setInviteOpen} />
       )}
       {organisationId && (
+        <InviteClubAdminDialog
+          organisationId={organisationId}
+          open={inviteClubAdminOpen}
+          onOpenChange={setInviteClubAdminOpen}
+        />
+      )}
+      {organisationId && (
         <CreateClubMemberDialog
           organisationId={organisationId}
           open={addMemberOpen}
@@ -493,6 +610,29 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
               variant="destructive"
               onClick={() => removeId && removeMutation.mutate(removeId)}
               disabled={removeMutation.isPending}
+            >
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!removeClubAdminId} onOpenChange={(open) => !open && setRemoveClubAdminId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove this club admin?</DialogTitle>
+            <DialogDescription>
+              This removes their access to manage club membership for this organisation.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveClubAdminId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => removeClubAdminId && removeClubAdminMutation.mutate(removeClubAdminId)}
+              disabled={removeClubAdminMutation.isPending}
             >
               Remove
             </Button>

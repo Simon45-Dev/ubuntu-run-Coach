@@ -12,4 +12,5 @@ export interface AuthContext {
   coachId?: string;
   athleteId?: string;
   clubMemberId?: string;
+  clubAdminId?: string;
 }

@@ -118,7 +118,20 @@ export class CoachesService {
     });
   }
 
+  /**
+   * Only COACH/PLATFORM_ADMIN may ever resolve a Coach record - any other
+   * org-scoped role (CLUB_MEMBER, CLUB_ADMIN) is rejected outright here,
+   * not just filtered by organisationId, so a role that merely shares the
+   * org can't read a coach's profile via a direct API call.
+   */
+  private assertCanViewCoaches(ctx: AuthContext): void {
+    if (ctx.role !== Role.PLATFORM_ADMIN && ctx.role !== Role.COACH) {
+      throw new ForbiddenException();
+    }
+  }
+
   async findAllForOrganisation(ctx: AuthContext, organisationId: string) {
+    this.assertCanViewCoaches(ctx);
     if (ctx.role !== Role.PLATFORM_ADMIN && ctx.organisationId !== organisationId) {
       throw new ForbiddenException();
     }
@@ -129,6 +142,7 @@ export class CoachesService {
   }
 
   async findOne(ctx: AuthContext, id: string) {
+    this.assertCanViewCoaches(ctx);
     const coach = await this.prisma.coach.findFirst({
       where: { id, deletedAt: null },
       include: COACH_INCLUDE,

@@ -91,8 +91,8 @@ export function buildTrainingPlanScopeFilter(ctx: AuthContext): Record<string, u
 /**
  * Scopes a ClubMember query:
  * - PLATFORM_ADMIN: unrestricted
- * - COACH: any member within their own organisation - membership isn't tied
- *   to one specific coach, unlike an athlete's roster
+ * - COACH / CLUB_ADMIN: any member within their own organisation -
+ *   membership isn't tied to one specific coach, unlike an athlete's roster
  * - CLUB_MEMBER: only their own record
  */
 export function buildClubMemberScopeFilter(ctx: AuthContext): Record<string, unknown> {
@@ -102,6 +102,11 @@ export function buildClubMemberScopeFilter(ctx: AuthContext): Record<string, unk
     case Role.COACH:
       if (!ctx.organisationId) {
         throw new ForbiddenException('Coach context missing organisationId');
+      }
+      return { organisationId: ctx.organisationId };
+    case Role.CLUB_ADMIN:
+      if (!ctx.organisationId) {
+        throw new ForbiddenException('Club admin context missing organisationId');
       }
       return { organisationId: ctx.organisationId };
     case Role.CLUB_MEMBER:

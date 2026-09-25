@@ -35,14 +35,14 @@ export class ClubMembersController {
   constructor(private readonly clubMembersService: ClubMembersService) {}
 
   @Post('organisations/:organisationId/club-members')
-  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
   @ScopeResource('organisation', 'organisationId')
   create(@Param('organisationId') organisationId: string, @Body() dto: CreateClubMemberDto) {
     return this.clubMembersService.create(organisationId, dto);
   }
 
   @Post('organisations/:organisationId/club-members/import')
-  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
   @ScopeResource('organisation', 'organisationId')
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 1_000_000 } }))
@@ -77,25 +77,25 @@ export class ClubMembersController {
   }
 
   @Delete('club-members/:id')
-  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
   remove(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
     return this.clubMembersService.softDelete(ctx, id);
   }
 
   @Post('club-members/:id/invite')
-  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
   invite(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
     return this.clubMembersService.invite(ctx, id);
   }
 
   @Post('club-members/:id/resend-invite')
-  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
   resendInvite(@CurrentUser() ctx: AuthContext, @Param('id') id: string) {
     return this.clubMembersService.resendInvite(ctx, id);
   }
 
   @Post('club-members/:id/payments')
-  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
   @Audit('CLUB_MEMBER_PAYMENT_RECORDED')
   createPayment(
     @CurrentUser() ctx: AuthContext,
@@ -111,7 +111,7 @@ export class ClubMembersController {
   }
 
   @Delete('club-member-payments/:paymentId')
-  @Roles(Role.COACH, Role.PLATFORM_ADMIN)
+  @Roles(Role.COACH, Role.PLATFORM_ADMIN, Role.CLUB_ADMIN)
   @Audit('CLUB_MEMBER_PAYMENT_DELETED')
   deletePayment(@CurrentUser() ctx: AuthContext, @Param('paymentId') paymentId: string) {
     return this.clubMembersService.deletePayment(ctx, paymentId);

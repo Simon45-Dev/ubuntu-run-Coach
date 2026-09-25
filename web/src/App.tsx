@@ -22,6 +22,7 @@ import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage'
 import { OrganisationsListPage } from '@/features/admin/OrganisationsListPage'
 import { OrganisationDetailPage } from '@/features/admin/OrganisationDetailPage'
 import { MyTeamPage } from '@/features/admin/MyTeamPage'
+import { MyClubPage } from '@/features/admin/MyClubPage'
 import { AuditLogPage } from '@/features/admin/AuditLogPage'
 import { UsersListPage } from '@/features/admin/UsersListPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
@@ -34,6 +35,7 @@ function RootRedirect() {
     return <Navigate to="/home" replace />
   }
   if (ctx?.role === 'CLUB_MEMBER') return <Navigate to="/membership" replace />
+  if (ctx?.role === 'CLUB_ADMIN') return <Navigate to="/my-club" replace />
   return <Navigate to="/admin" replace />
 }
 
@@ -72,6 +74,9 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute allow={['CLUB_MEMBER']} />}>
             <Route path="/membership" element={<MyMembershipPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allow={['CLUB_ADMIN']} />}>
+            <Route path="/my-club" element={<MyClubPage />} />
           </Route>
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />

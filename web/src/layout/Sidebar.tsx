@@ -24,6 +24,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const isAthlete = ctx?.role === 'ATHLETE'
   const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
   const isClubMember = ctx?.role === 'CLUB_MEMBER'
+  const isClubAdmin = ctx?.role === 'CLUB_ADMIN'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -83,6 +84,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <NavLink to="/membership" className={linkClass}>
               <IdCard className="h-4 w-4" />
               My Membership
+            </NavLink>
+          )}
+          {isClubAdmin && (
+            <NavLink to="/my-club" className={linkClass}>
+              <Building2 className="h-4 w-4" />
+              My Club
             </NavLink>
           )}
           {isCoach && (

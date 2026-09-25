@@ -26,6 +26,7 @@ enum Role {
   COACH
   ATHLETE
   CLUB_MEMBER
+  CLUB_ADMIN
 }
 
 enum UserStatus {
@@ -122,6 +123,7 @@ model Organisation {
   coaches       Coach[]
   subscriptions Subscription[]
   clubMembers   ClubMember[]
+  clubAdmins    ClubAdmin[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -184,6 +186,7 @@ model User {
   coachProfile      Coach?
   athleteProfile    Athlete?
   clubMemberProfile ClubMember?
+  clubAdminProfile  ClubAdmin?
   refreshTokens     RefreshToken[]
   sentMessages      Message[]      @relation("SentMessages")
   receivedMessages  Message[]      @relation("ReceivedMessages")
@@ -346,6 +349,29 @@ model ClubMemberPayment {
 
   @@index([clubMemberId])
   @@map("club_member_payments")
+}
+
+/// Scoped to one organisation; can manage that organisation's club
+/// membership (roster, CSV import, payments, expiry reminders) but has no
+/// access to athletes, training plans, or other coaching data - see
+/// buildClubMemberScopeFilter and the deliberate absence of CLUB_ADMIN from
+/// buildAthleteScopeFilter/buildTrainingPlanScopeFilter/buildCoachScopeFilter
+/// in src/common/scope/scope-filters.ts. userId is required (unlike
+/// ClubMember) - a row here is only ever created via the invite flow
+/// alongside its User, the same as Coach.
+model ClubAdmin {
+  id             String       @id @default(uuid())
+  userId         String       @unique
+  user           User         @relation(fields: [userId], references: [id])
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([organisationId])
+  @@map("club_admins")
 }
 
 model PersonalBest {

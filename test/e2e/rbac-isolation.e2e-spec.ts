@@ -4,6 +4,7 @@ import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
 import {
   createAthleteForCoach,
+  createClubAdminForCoach,
   createPlatformAdmin,
   createTrainingPlanForAthlete,
   createWorkoutForPlan,
@@ -276,5 +277,38 @@ describe('RBAC data isolation (e2e)', () => {
       .get(`/api/v1/users/${athleteBMe.body.userId}/messages`)
       .set('Authorization', `Bearer ${coachA.accessToken}`)
       .expect(404);
+  });
+
+  it('a CLUB_ADMIN token is rejected on athlete- and training-plan-scoped routes (privilege escalation attempt)', async () => {
+    const coach = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const clubAdmin = await createClubAdminForCoach(app, coach.accessToken, coach.organisationId);
+    const clubAdminToken = await loginAs(app, clubAdmin.email, clubAdmin.password);
+
+    await request(app.getHttpServer())
+      .get(`/api/v1/coaches/${coach.coachId}/athletes`)
+      .set('Authorization', `Bearer ${clubAdminToken}`)
+      .expect(403);
+
+    // No @Roles() on this route - OrgScopeGuard's 'athlete' branch is a
+    // no-op for CLUB_ADMIN, so this is rejected by buildAthleteScopeFilter's
+    // default case instead (a synchronous throw, before any DB lookup).
+    await request(app.getHttpServer())
+      .get(`/api/v1/athletes/${athlete.id}`)
+      .set('Authorization', `Bearer ${clubAdminToken}`)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/athletes/${athlete.id}/training-plans`)
+      .set('Authorization', `Bearer ${clubAdminToken}`)
+      .send({ name: 'Escalation', startDate: new Date().toISOString() })
+      .expect(403);
+
+    // Coach-profile hardening: a CLUB_ADMIN can't read a coach's profile
+    // either, even within their own organisation.
+    await request(app.getHttpServer())
+      .get(`/api/v1/coaches/${coach.coachId}`)
+      .set('Authorization', `Bearer ${clubAdminToken}`)
+      .expect(403);
   });
 });

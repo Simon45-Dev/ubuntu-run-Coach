@@ -73,6 +73,35 @@ export async function createAthleteForCoach(
   return { id: res.body.id as string, email, password };
 }
 
+/**
+ * Club admins are invite-based, same as coaches/athletes - this fixture
+ * absorbs the invite-then-accept round trip so specs can log in with
+ * loginAs(app, clubAdmin.email, clubAdmin.password) afterwards.
+ */
+export async function createClubAdminForCoach(
+  app: INestApplication,
+  coachAccessToken: string,
+  organisationId: string,
+  overrides: Partial<{ email: string; password: string; name: string }> = {},
+) {
+  const email =
+    overrides.email ??
+    `club-admin-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
+  const password = overrides.password ?? DEFAULT_PASSWORD;
+  const res = await request(app.getHttpServer())
+    .post(`/api/v1/organisations/${organisationId}/club-admins`)
+    .set('Authorization', `Bearer ${coachAccessToken}`)
+    .send({ email, name: overrides.name ?? 'Test Club Admin' })
+    .expect(201);
+
+  await request(app.getHttpServer())
+    .post('/api/v1/auth/accept-invite')
+    .send({ token: res.body.inviteToken, password })
+    .expect(200);
+
+  return { id: res.body.id as string, email, password };
+}
+
 export async function loginAs(app: INestApplication, email: string, password: string) {
   const res = await request(app.getHttpServer())
     .post('/api/v1/auth/login')

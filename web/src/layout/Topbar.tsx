@@ -13,6 +13,7 @@ const ROLE_LABELS = {
   ATHLETE: 'Athlete',
   PLATFORM_ADMIN: 'Platform Admin',
   CLUB_MEMBER: 'Club Member',
+  CLUB_ADMIN: 'Club Admin',
 } as const
 
 export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {

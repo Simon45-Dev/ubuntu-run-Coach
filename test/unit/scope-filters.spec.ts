@@ -25,6 +25,11 @@ describe('scope-filters', () => {
       expect(() => buildAthleteScopeFilter(ctx)).toThrow();
     });
 
+    it('CLUB_ADMIN has no access - a club admin never sees athlete data', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.CLUB_ADMIN, organisationId: 'org-1' };
+      expect(() => buildAthleteScopeFilter(ctx)).toThrow();
+    });
+
     it('ATHLETE is scoped to their own id only', () => {
       const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE, athleteId: 'athlete-1' };
       expect(buildAthleteScopeFilter(ctx)).toEqual({ id: 'athlete-1' });
@@ -49,6 +54,16 @@ describe('scope-filters', () => {
 
     it('COACH without an organisationId throws', () => {
       const ctx: AuthContext = { userId: 'u1', role: Role.COACH };
+      expect(() => buildClubMemberScopeFilter(ctx)).toThrow();
+    });
+
+    it('CLUB_ADMIN is scoped to their own organisationId, same as COACH', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.CLUB_ADMIN, organisationId: 'org-1' };
+      expect(buildClubMemberScopeFilter(ctx)).toEqual({ organisationId: 'org-1' });
+    });
+
+    it('CLUB_ADMIN without an organisationId throws', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.CLUB_ADMIN };
       expect(() => buildClubMemberScopeFilter(ctx)).toThrow();
     });
 
@@ -100,6 +115,11 @@ describe('scope-filters', () => {
       const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE };
       expect(() => buildCoachScopeFilter(ctx)).toThrow();
     });
+
+    it('CLUB_ADMIN has no access - a club admin never sees coach data', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.CLUB_ADMIN, organisationId: 'org-1' };
+      expect(() => buildCoachScopeFilter(ctx)).toThrow();
+    });
   });
 
   describe('buildTrainingPlanScopeFilter', () => {
@@ -130,6 +150,11 @@ describe('scope-filters', () => {
 
     it('ATHLETE without an athleteId throws', () => {
       const ctx: AuthContext = { userId: 'u1', role: Role.ATHLETE };
+      expect(() => buildTrainingPlanScopeFilter(ctx)).toThrow();
+    });
+
+    it('CLUB_ADMIN has no access - a club admin never sees training plan data', () => {
+      const ctx: AuthContext = { userId: 'u1', role: Role.CLUB_ADMIN, organisationId: 'org-1' };
       expect(() => buildTrainingPlanScopeFilter(ctx)).toThrow();
     });
   });
