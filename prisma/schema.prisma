@@ -295,6 +295,7 @@ model ClubMember {
   phone            String?
   dateOfBirth      DateTime?
   address          String?
+  membershipCategory MembershipCategory?
 
   /// Overridable at creation (a club backfilling a member's real historical
   /// join date) - defaults to creation time otherwise.
@@ -331,6 +332,15 @@ enum PaymentMethod {
   EFT
   CARD
   OTHER
+}
+
+/// Age-category classification for race/competition eligibility - not
+/// auto-derived from dateOfBirth, since exact age cutoffs vary by
+/// federation; a coach/admin (or the member themselves) sets it directly.
+enum MembershipCategory {
+  JUNIOR
+  OPEN
+  GRAND_MASTER
 }
 
 /// Record-keeping only - no payment gateway integration. A coach/admin logs

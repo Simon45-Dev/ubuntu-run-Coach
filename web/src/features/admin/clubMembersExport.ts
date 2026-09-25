@@ -1,5 +1,6 @@
 import type { ClubMember } from '@/api/types'
 import { formatDate } from '@/lib/format'
+import { MEMBERSHIP_CATEGORY_LABELS } from './membershipCategory'
 
 function formatOrBlank(value: string | null | undefined): string {
   return value ? formatDate(value) : ''
@@ -14,6 +15,7 @@ export interface ClubMemberExportRow {
   Phone: string
   'Date of Birth': string
   Address: string
+  Category: string
   'Join Date': string
   'Membership Expiry': string
   'Last Renewal': string
@@ -34,6 +36,7 @@ export function toClubMemberExportRows(members: ClubMember[]): ClubMemberExportR
     Phone: member.phone ?? '',
     'Date of Birth': formatOrBlank(member.dateOfBirth),
     Address: member.address ?? '',
+    Category: member.membershipCategory ? MEMBERSHIP_CATEGORY_LABELS[member.membershipCategory] : '',
     'Join Date': formatOrBlank(member.joinDate),
     'Membership Expiry': formatOrBlank(member.membershipExpiryDate),
     'Last Renewal': formatOrBlank(member.lastRenewalDate),

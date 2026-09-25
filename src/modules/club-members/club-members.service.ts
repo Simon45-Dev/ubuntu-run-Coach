@@ -65,6 +65,7 @@ export class ClubMembersService {
           phone: dto.phone,
           dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
           address: dto.address,
+          membershipCategory: dto.membershipCategory,
           joinDate: dto.joinDate ? new Date(dto.joinDate) : new Date(),
           nextOfKinName: dto.nextOfKinName,
           nextOfKinPhone: dto.nextOfKinPhone,
@@ -110,6 +111,7 @@ export class ClubMembersService {
               phone: row.phone,
               dateOfBirth: row.dateOfBirth,
               address: row.address,
+              membershipCategory: row.membershipCategory,
               joinDate: row.joinDate ?? new Date(),
               nextOfKinName: row.nextOfKinName,
               nextOfKinPhone: row.nextOfKinPhone,
@@ -210,6 +212,7 @@ export class ClubMembersService {
         phone: dto.phone,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
         address: dto.address,
+        membershipCategory: dto.membershipCategory,
         joinDate: dto.joinDate ? new Date(dto.joinDate) : undefined,
         membershipExpiryDate: dto.membershipExpiryDate
           ? new Date(dto.membershipExpiryDate)

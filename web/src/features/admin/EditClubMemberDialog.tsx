@@ -6,10 +6,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
 import { updateClubMember } from '@/api/clubMembers'
-import type { ClubMember } from '@/api/types'
+import { MEMBERSHIP_CATEGORIES, type ClubMember } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { MEMBERSHIP_CATEGORY_LABELS } from './membershipCategory'
 
 // Mirrors backend UpdateClubMemberDto constraints - coach/admin only, can also
 // see and set membershipExpiryDate/lastRenewalDate, unlike self-service.
@@ -29,6 +31,7 @@ const schema = z.object({
   phone: z.string().optional(),
   dateOfBirth: z.string().optional(),
   address: z.string().optional(),
+  membershipCategory: z.enum(MEMBERSHIP_CATEGORIES).optional(),
   joinDate: z.string().optional(),
   membershipExpiryDate: z.string().optional(),
   lastRenewalDate: z.string().optional(),
@@ -59,8 +62,11 @@ export function EditClubMemberDialog({
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const membershipCategory = watch('membershipCategory')
 
   useEffect(() => {
     if (!member) return
@@ -72,6 +78,7 @@ export function EditClubMemberDialog({
       phone: member.phone ?? '',
       dateOfBirth: toDateInput(member.dateOfBirth),
       address: member.address ?? '',
+      membershipCategory: member.membershipCategory ?? undefined,
       joinDate: toDateInput(member.joinDate),
       membershipExpiryDate: toDateInput(member.membershipExpiryDate),
       lastRenewalDate: toDateInput(member.lastRenewalDate),
@@ -154,6 +161,26 @@ export function EditClubMemberDialog({
           </div>
 
           <p className="mt-2 text-xs font-medium uppercase text-navy/40">Membership</p>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="edit-membershipCategory">Category</Label>
+            <Select
+              value={membershipCategory ?? undefined}
+              onValueChange={(v) =>
+                setValue('membershipCategory', v as FormValues['membershipCategory'])
+              }
+            >
+              <SelectTrigger id="edit-membershipCategory">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {MEMBERSHIP_CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {MEMBERSHIP_CATEGORY_LABELS[category]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="edit-joinDate">Join date</Label>
             <Input id="edit-joinDate" type="date" {...register('joinDate')} />

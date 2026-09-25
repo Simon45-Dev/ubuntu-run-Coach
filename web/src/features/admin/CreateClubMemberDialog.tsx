@@ -5,9 +5,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
 import { createClubMember } from '@/api/clubMembers'
+import { MEMBERSHIP_CATEGORIES } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -16,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { MEMBERSHIP_CATEGORY_LABELS } from './membershipCategory'
 
 // Mirrors backend CreateClubMemberDto constraints.
 const schema = z.object({
@@ -26,6 +29,7 @@ const schema = z.object({
   phone: z.string().optional(),
   dateOfBirth: z.string().optional(),
   address: z.string().optional(),
+  membershipCategory: z.enum(MEMBERSHIP_CATEGORIES).optional(),
   joinDate: z.string().optional(),
   nextOfKinName: z.string().optional(),
   nextOfKinPhone: z.string().optional(),
@@ -48,6 +52,7 @@ export function CreateClubMemberDialog({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -113,6 +118,25 @@ export function CreateClubMemberDialog({
               <Label htmlFor="dateOfBirth">Date of birth (optional)</Label>
               <Input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
             </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="membershipCategory">Category (optional)</Label>
+            <Select
+              onValueChange={(v) =>
+                setValue('membershipCategory', v as FormValues['membershipCategory'])
+              }
+            >
+              <SelectTrigger id="membershipCategory">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {MEMBERSHIP_CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {MEMBERSHIP_CATEGORY_LABELS[category]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="joinDate">Join date</Label>

@@ -1,4 +1,7 @@
 import { parse } from 'csv-parse/sync';
+import { MembershipCategory } from '@prisma/client';
+
+const MEMBERSHIP_CATEGORIES = new Set(Object.values(MembershipCategory));
 
 export interface ParsedClubMemberRow {
   firstName: string;
@@ -8,6 +11,7 @@ export interface ParsedClubMemberRow {
   phone?: string;
   dateOfBirth?: Date;
   address?: string;
+  membershipCategory?: MembershipCategory;
   joinDate?: Date;
   nextOfKinName?: string;
   nextOfKinPhone?: string;
@@ -24,6 +28,7 @@ interface RawCsvRow {
   phone?: string;
   dateOfBirth?: string;
   address?: string;
+  membershipCategory?: string;
   joinDate?: string;
   nextOfKinName?: string;
   nextOfKinPhone?: string;
@@ -87,6 +92,15 @@ export function parseClubMembersCsv(buffer: Buffer): ParseClubMembersCsvResult {
     const dateOfBirth = parseOptionalDate(record.dateOfBirth, 'dateOfBirth', rowNum, errors);
     const joinDate = parseOptionalDate(record.joinDate, 'joinDate', rowNum, errors);
 
+    if (
+      record.membershipCategory &&
+      !MEMBERSHIP_CATEGORIES.has(record.membershipCategory as MembershipCategory)
+    ) {
+      errors.push(
+        `Row ${rowNum}: "membershipCategory" must be one of ${[...MEMBERSHIP_CATEGORIES].join(', ')}, got "${record.membershipCategory}"`,
+      );
+    }
+
     if (record.firstName && record.lastName && record.email && EMAIL_PATTERN.test(record.email)) {
       rows.push({
         firstName: record.firstName,
@@ -96,6 +110,9 @@ export function parseClubMembersCsv(buffer: Buffer): ParseClubMembersCsvResult {
         phone: record.phone || undefined,
         dateOfBirth,
         address: record.address || undefined,
+        membershipCategory: record.membershipCategory
+          ? (record.membershipCategory as MembershipCategory)
+          : undefined,
         joinDate,
         nextOfKinName: record.nextOfKinName || undefined,
         nextOfKinPhone: record.nextOfKinPhone || undefined,

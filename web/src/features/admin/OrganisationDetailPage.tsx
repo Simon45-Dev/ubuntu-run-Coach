@@ -48,6 +48,7 @@ import { ImportClubMembersCsvDialog } from './ImportClubMembersCsvDialog'
 import { ClubMemberPaymentsDialog } from './ClubMemberPaymentsDialog'
 import { InviteLinkDialog } from '../roster/InviteLinkDialog'
 import { getMembershipStatus, type MembershipStatus } from './membershipStatus'
+import { MEMBERSHIP_CATEGORY_LABELS } from './membershipCategory'
 import { filterClubMembers } from './clubMemberFilter'
 import { toClubMemberExportRows } from './clubMembersExport'
 
@@ -507,6 +508,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
               <TableHead>Member #</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Login status</TableHead>
               <TableHead>Membership</TableHead>
               <TableHead />
@@ -522,6 +524,9 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
                   {member.firstName} {member.lastName}
                 </TableCell>
                 <TableCell className="text-navy/60">{member.email}</TableCell>
+                <TableCell className="text-navy/60">
+                  {member.membershipCategory ? MEMBERSHIP_CATEGORY_LABELS[member.membershipCategory] : '-'}
+                </TableCell>
                 <TableCell>
                   {member.user ? (
                     <Badge variant={statusVariant[member.user.status]}>{member.user.status}</Badge>

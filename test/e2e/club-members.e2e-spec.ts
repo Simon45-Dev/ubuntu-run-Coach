@@ -140,6 +140,33 @@ describe('Club Members (e2e)', () => {
     expect(createRes.body.joinDate).toContain('2019-06-15');
   });
 
+  it('membershipCategory round-trips on create and can be changed via update', async () => {
+    const coach = await registerCoach(app);
+    const createRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ ...MEMBER_INPUT, membershipCategory: 'JUNIOR' })
+      .expect(201);
+    expect(createRes.body.membershipCategory).toBe('JUNIOR');
+
+    const updateRes = await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${createRes.body.id}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ membershipCategory: 'GRAND_MASTER' })
+      .expect(200);
+    expect(updateRes.body.membershipCategory).toBe('GRAND_MASTER');
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({
+        ...MEMBER_INPUT,
+        email: 'invalid-category@example.test',
+        membershipCategory: 'VETERAN',
+      })
+      .expect(400);
+  });
+
   it('a coach from a different organisation gets 404, not the member data', async () => {
     const coachA = await registerCoach(app);
     const coachB = await registerCoach(app);
@@ -224,6 +251,27 @@ describe('Club Members (e2e)', () => {
       '0002',
     ]);
     expect(res.body[0].idNumber).toBe('1234567890123');
+  });
+
+  it('imports membershipCategory from a CSV file, and rejects an unrecognised category value', async () => {
+    const coach = await registerCoach(app);
+    const validCsv =
+      'firstName,lastName,email,membershipCategory\nJohn,Smith,john.smith@example.test,OPEN';
+    const validRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members/import`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .attach('file', Buffer.from(validCsv), 'members.csv')
+      .expect(201);
+    expect(validRes.body[0].membershipCategory).toBe('OPEN');
+
+    const invalidCsv =
+      'firstName,lastName,email,membershipCategory\nJane,Doe,jane.doe@example.test,VETERAN';
+    const invalidRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members/import`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .attach('file', Buffer.from(invalidCsv), 'members.csv')
+      .expect(400);
+    expect(invalidRes.body.errors[0]).toContain('membershipCategory');
   });
 
   it('rejects a CSV import with invalid rows, importing nothing', async () => {

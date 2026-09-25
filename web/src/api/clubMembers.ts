@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { ClubMember } from './types'
+import type { ClubMember, MembershipCategory } from './types'
 
 export async function listClubMembers(organisationId: string): Promise<ClubMember[]> {
   const res = await apiClient.get<ClubMember[]>(`/organisations/${organisationId}/club-members`)
@@ -19,6 +19,7 @@ export interface CreateClubMemberInput {
   phone?: string
   dateOfBirth?: string
   address?: string
+  membershipCategory?: MembershipCategory
   joinDate?: string
   nextOfKinName?: string
   nextOfKinPhone?: string

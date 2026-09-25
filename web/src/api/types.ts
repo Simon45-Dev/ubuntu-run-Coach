@@ -102,6 +102,9 @@ export interface Athlete {
   coach: { id: string; user: { id: string; name: string } } | null
 }
 
+export const MEMBERSHIP_CATEGORIES = ['JUNIOR', 'OPEN', 'GRAND_MASTER'] as const
+export type MembershipCategory = (typeof MEMBERSHIP_CATEGORIES)[number]
+
 export interface ClubMember {
   id: string
   organisationId: string
@@ -114,6 +117,7 @@ export interface ClubMember {
   phone: string | null
   dateOfBirth: string | null
   address: string | null
+  membershipCategory: MembershipCategory | null
   joinDate: string
   membershipExpiryDate: string | null
   lastRenewalDate: string | null

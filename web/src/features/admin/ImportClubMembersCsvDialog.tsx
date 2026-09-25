@@ -70,7 +70,8 @@ export function ImportClubMembersCsvDialog({
           <DialogDescription>
             A header row followed by one member per row. Columns: <code>firstName</code>,{' '}
             <code>lastName</code>, <code>email</code> (required), and optionally <code>idNumber</code>,{' '}
-            <code>phone</code>, <code>dateOfBirth</code>, <code>address</code>, <code>joinDate</code>,{' '}
+            <code>phone</code>, <code>dateOfBirth</code>, <code>address</code>,{' '}
+            <code>membershipCategory</code> (JUNIOR, OPEN, or GRAND_MASTER), <code>joinDate</code>,{' '}
             <code>nextOfKinName</code>, <code>nextOfKinPhone</code>, <code>nextOfKinRelationship</code>.
             If anything's wrong, nothing is imported.
           </DialogDescription>

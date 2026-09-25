@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { MembershipCategory } from '@prisma/client';
+import { IsDateString, IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 
 /** No membershipNumber field - always system-generated, see ClubMembersService.create. */
 export class CreateClubMemberDto {
@@ -36,6 +37,11 @@ export class CreateClubMemberDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({ enum: MembershipCategory })
+  @IsOptional()
+  @IsEnum(MembershipCategory)
+  membershipCategory?: MembershipCategory;
 
   @ApiPropertyOptional({
     description: 'Overridable historical join date - defaults to now if omitted',

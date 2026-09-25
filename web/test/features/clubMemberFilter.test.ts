@@ -17,6 +17,7 @@ function makeMember(overrides: Partial<ClubMember>): ClubMember {
     phone: null,
     dateOfBirth: null,
     address: null,
+    membershipCategory: null,
     joinDate: '2026-01-01T00:00:00.000Z',
     membershipExpiryDate: null,
     lastRenewalDate: null,

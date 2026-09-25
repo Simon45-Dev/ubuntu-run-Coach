@@ -8,16 +8,19 @@ import { toast } from 'sonner'
 import { getClubMember, updateClubMember } from '@/api/clubMembers'
 import { listClubMemberPayments } from '@/api/clubMemberPayments'
 import { getOrganisation } from '@/api/organisations'
+import { MEMBERSHIP_CATEGORIES } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/EmptyState'
 import { FullPageSpinner } from '@/components/Spinner'
 import { formatCurrency, formatDate } from '@/lib/format'
+import { MEMBERSHIP_CATEGORY_LABELS } from '@/features/admin/membershipCategory'
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -27,6 +30,7 @@ const schema = z.object({
   phone: z.string().optional(),
   dateOfBirth: z.string().optional(),
   address: z.string().optional(),
+  membershipCategory: z.enum(MEMBERSHIP_CATEGORIES).optional(),
   nextOfKinName: z.string().optional(),
   nextOfKinPhone: z.string().optional(),
   nextOfKinRelationship: z.string().optional(),
@@ -59,8 +63,11 @@ export function MyMembershipPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const membershipCategory = watch('membershipCategory')
 
   useEffect(() => {
     if (!member) return
@@ -72,6 +79,7 @@ export function MyMembershipPage() {
       phone: member.phone ?? '',
       dateOfBirth: member.dateOfBirth ? member.dateOfBirth.slice(0, 10) : '',
       address: member.address ?? '',
+      membershipCategory: member.membershipCategory ?? undefined,
       nextOfKinName: member.nextOfKinName ?? '',
       nextOfKinPhone: member.nextOfKinPhone ?? '',
       nextOfKinRelationship: member.nextOfKinRelationship ?? '',
@@ -141,6 +149,28 @@ export function MyMembershipPage() {
                 <Label htmlFor="dateOfBirth">Date of birth</Label>
                 <Input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
               </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="membershipCategory">Category</Label>
+              <Select
+                value={membershipCategory ?? undefined}
+                onValueChange={(v) =>
+                  setValue('membershipCategory', v as FormValues['membershipCategory'], {
+                    shouldDirty: true,
+                  })
+                }
+              >
+                <SelectTrigger id="membershipCategory">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MEMBERSHIP_CATEGORIES.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {MEMBERSHIP_CATEGORY_LABELS[category]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <p className="mt-2 text-xs font-medium uppercase text-navy/40">Contact</p>

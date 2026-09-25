@@ -15,6 +15,7 @@ function member(overrides: Partial<ClubMember> = {}): ClubMember {
     phone: null,
     dateOfBirth: null,
     address: null,
+    membershipCategory: null,
     joinDate: '2026-01-01T00:00:00.000Z',
     membershipExpiryDate: null,
     lastRenewalDate: null,
@@ -34,6 +35,7 @@ describe('toClubMemberExportRows', () => {
     expect(rows[0]['ID Number']).toBe('')
     expect(rows[0]['Membership Expiry']).toBe('')
     expect(rows[0]['Login Status']).toBe('No login')
+    expect(rows[0]['Category']).toBe('')
   })
 
   it('formats populated fields, including a linked login status', () => {
@@ -41,12 +43,14 @@ describe('toClubMemberExportRows', () => {
       member({
         idNumber: '9001015800089',
         membershipExpiryDate: '2027-06-15T00:00:00.000Z',
+        membershipCategory: 'GRAND_MASTER',
         user: { id: 'u1', email: 'thabo@example.test', name: 'Thabo Nkosi', status: 'ACTIVE' },
       }),
     ])
     expect(rows[0]['ID Number']).toBe('9001015800089')
     expect(rows[0]['Membership Expiry']).toBe('15 Jun 2027')
     expect(rows[0]['Login Status']).toBe('ACTIVE')
+    expect(rows[0]['Category']).toBe('Grand Master')
   })
 
   it('maps every member to its own row in order', () => {
