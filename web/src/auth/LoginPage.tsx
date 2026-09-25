@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { AxiosError } from 'axios'
 import { useAuth } from './AuthProvider'
 import logo from '@/assets/logo.png'
+import loginBackground from '@/assets/login-background.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,7 +44,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-mist px-4">
+    <div
+      className="flex min-h-screen items-center justify-center bg-cover bg-center px-4"
+      style={{ backgroundImage: `url(${loginBackground})` }}
+    >
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           <img src={logo} alt="Ubuntu Run" className="mx-auto mb-6 h-auto w-40" />
