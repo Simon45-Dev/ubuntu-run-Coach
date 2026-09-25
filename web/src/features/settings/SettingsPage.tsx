@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { toDataURL } from 'qrcode'
 import { disableMfa, enableMfa, verifyMfa } from '@/api/auth'
 import { deleteAvatar, getCurrentUser, uploadAvatar } from '@/api/users'
 import { Button } from '@/components/ui/button'
@@ -31,7 +32,7 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export function SettingsPage() {
   const queryClient = useQueryClient()
-  const [enrolment, setEnrolment] = useState<{ secret: string } | null>(null)
+  const [enrolment, setEnrolment] = useState<{ secret: string; qrDataUrl: string } | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
   const { data: user, isLoading } = useQuery({ queryKey: ['me'], queryFn: getCurrentUser })
@@ -71,8 +72,14 @@ export function SettingsPage() {
   const disableForm = useForm<CodeForm>({ resolver: zodResolver(codeSchema) })
 
   const startEnrolMutation = useMutation({
-    mutationFn: enableMfa,
-    onSuccess: (result) => setEnrolment({ secret: result.secret }),
+    mutationFn: async () => {
+      const result = await enableMfa()
+      // Generated entirely client-side from the key URI - the TOTP secret
+      // never leaves the browser to a third-party QR-rendering service.
+      const qrDataUrl = await toDataURL(result.keyUri, { width: 220, margin: 1 })
+      return { secret: result.secret, qrDataUrl }
+    },
+    onSuccess: setEnrolment,
     onError: (err) => toast.error(errorMessage(err, 'Could not start MFA enrolment')),
   })
 
@@ -174,9 +181,15 @@ export function SettingsPage() {
           ) : enrolment ? (
             <>
               <p className="text-sm text-navy/60">
-                Add this key to your authenticator app (Google Authenticator, Authy, etc.), then enter the
-                6-digit code it generates.
+                Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then
+                enter the 6-digit code it generates.
               </p>
+              <img
+                src={enrolment.qrDataUrl}
+                alt="QR code for MFA setup - scan with your authenticator app"
+                className="h-48 w-48 self-center rounded-md border border-navy/10 p-2"
+              />
+              <p className="text-xs text-navy/50">Can't scan? Enter this key manually instead:</p>
               <p className="break-all rounded-md bg-mist px-3 py-2 font-mono text-sm text-navy">
                 {enrolment.secret}
               </p>
