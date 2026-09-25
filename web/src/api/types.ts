@@ -98,10 +98,14 @@ export interface ClubMember {
   membershipNumber: string
   firstName: string
   lastName: string
+  idNumber: string | null
   email: string
   phone: string | null
   dateOfBirth: string | null
   address: string | null
+  joinDate: string
+  membershipExpiryDate: string | null
+  lastRenewalDate: string | null
   nextOfKinName: string | null
   nextOfKinPhone: string | null
   nextOfKinRelationship: string | null

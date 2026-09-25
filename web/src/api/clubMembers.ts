@@ -14,10 +14,12 @@ export async function getClubMember(id: string): Promise<ClubMember> {
 export interface CreateClubMemberInput {
   firstName: string
   lastName: string
+  idNumber?: string
   email: string
   phone?: string
   dateOfBirth?: string
   address?: string
+  joinDate?: string
   nextOfKinName?: string
   nextOfKinPhone?: string
   nextOfKinRelationship?: string
@@ -31,7 +33,11 @@ export async function createClubMember(
   return res.data
 }
 
-export type UpdateClubMemberInput = Partial<CreateClubMemberInput>
+/** membershipExpiryDate/lastRenewalDate are coach/admin-only - see ClubMembersService.update. */
+export interface UpdateClubMemberInput extends Partial<CreateClubMemberInput> {
+  membershipExpiryDate?: string
+  lastRenewalDate?: string
+}
 
 export async function updateClubMember(id: string, input: UpdateClubMemberInput): Promise<ClubMember> {
   const res = await apiClient.patch<ClubMember>(`/club-members/${id}`, input)

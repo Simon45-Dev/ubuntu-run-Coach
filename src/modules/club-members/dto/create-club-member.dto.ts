@@ -13,6 +13,11 @@ export class CreateClubMemberDto {
   @MinLength(1)
   lastName: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idNumber?: string;
+
   @ApiProperty()
   @IsEmail()
   email: string;
@@ -31,6 +36,13 @@ export class CreateClubMemberDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({
+    description: 'Overridable historical join date - defaults to now if omitted',
+  })
+  @IsOptional()
+  @IsDateString()
+  joinDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

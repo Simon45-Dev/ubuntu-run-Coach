@@ -53,10 +53,12 @@ export class ClubMembersService {
           membershipNumber,
           firstName: dto.firstName,
           lastName: dto.lastName,
+          idNumber: dto.idNumber,
           email: dto.email,
           phone: dto.phone,
           dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
           address: dto.address,
+          joinDate: dto.joinDate ? new Date(dto.joinDate) : new Date(),
           nextOfKinName: dto.nextOfKinName,
           nextOfKinPhone: dto.nextOfKinPhone,
           nextOfKinRelationship: dto.nextOfKinRelationship,
@@ -89,16 +91,31 @@ export class ClubMembersService {
   }
 
   async update(ctx: AuthContext, id: string, dto: UpdateClubMemberDto) {
+    if (
+      ctx.role === Role.CLUB_MEMBER &&
+      (dto.joinDate !== undefined ||
+        dto.membershipExpiryDate !== undefined ||
+        dto.lastRenewalDate !== undefined)
+    ) {
+      throw new ForbiddenException('Members cannot change their own join date or membership dates');
+    }
+
     const member = await this.findOne(ctx, id);
     return this.prisma.clubMember.update({
       where: { id: member.id },
       data: {
         firstName: dto.firstName,
         lastName: dto.lastName,
+        idNumber: dto.idNumber,
         email: dto.email,
         phone: dto.phone,
         dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined,
         address: dto.address,
+        joinDate: dto.joinDate ? new Date(dto.joinDate) : undefined,
+        membershipExpiryDate: dto.membershipExpiryDate
+          ? new Date(dto.membershipExpiryDate)
+          : undefined,
+        lastRenewalDate: dto.lastRenewalDate ? new Date(dto.lastRenewalDate) : undefined,
         nextOfKinName: dto.nextOfKinName,
         nextOfKinPhone: dto.nextOfKinPhone,
         nextOfKinRelationship: dto.nextOfKinRelationship,

@@ -21,10 +21,12 @@ import {
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  idNumber: z.string().optional(),
   email: z.string().email('Enter a valid email'),
   phone: z.string().optional(),
   dateOfBirth: z.string().optional(),
   address: z.string().optional(),
+  joinDate: z.string().optional(),
   nextOfKinName: z.string().optional(),
   nextOfKinPhone: z.string().optional(),
   nextOfKinRelationship: z.string().optional(),
@@ -47,7 +49,10 @@ export function CreateClubMemberDialog({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { joinDate: new Date().toISOString().slice(0, 10) },
+  })
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => createClubMember(organisationId, values),
@@ -98,9 +103,19 @@ export function CreateClubMemberDialog({
               )}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="idNumber">ID number (optional)</Label>
+              <Input id="idNumber" {...register('idNumber')} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="dateOfBirth">Date of birth (optional)</Label>
+              <Input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
+            </div>
+          </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="dateOfBirth">Date of birth (optional)</Label>
-            <Input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
+            <Label htmlFor="joinDate">Join date</Label>
+            <Input id="joinDate" type="date" {...register('joinDate')} />
           </div>
 
           <p className="mt-2 text-xs font-medium uppercase text-navy/40">Contact</p>

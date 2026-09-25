@@ -19,6 +19,7 @@ import { formatDate } from '@/lib/format'
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
+  idNumber: z.string().optional(),
   email: z.string().email('Enter a valid email'),
   phone: z.string().optional(),
   dateOfBirth: z.string().optional(),
@@ -58,6 +59,7 @@ export function MyMembershipPage() {
     reset({
       firstName: member.firstName,
       lastName: member.lastName,
+      idNumber: member.idNumber ?? '',
       email: member.email,
       phone: member.phone ?? '',
       dateOfBirth: member.dateOfBirth ? member.dateOfBirth.slice(0, 10) : '',
@@ -122,9 +124,15 @@ export function MyMembershipPage() {
                 )}
               </div>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="dateOfBirth">Date of birth</Label>
-              <Input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="idNumber">ID number</Label>
+                <Input id="idNumber" {...register('idNumber')} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="dateOfBirth">Date of birth</Label>
+                <Input id="dateOfBirth" type="date" {...register('dateOfBirth')} />
+              </div>
             </div>
 
             <p className="mt-2 text-xs font-medium uppercase text-navy/40">Contact</p>
@@ -158,12 +166,43 @@ export function MyMembershipPage() {
               </div>
             </div>
 
-            <p className="text-xs text-navy/40">Member since {formatDate(member.createdAt)}</p>
-
             <Button type="submit" disabled={!isDirty || mutation.isPending} className="self-start">
               {mutation.isPending ? 'Saving...' : 'Save changes'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle>Membership</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase text-navy/40">Join date</p>
+            <p className="text-navy">{formatDate(member.joinDate)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase text-navy/40">Membership expiry</p>
+            <p className="text-navy">
+              {member.membershipExpiryDate ? formatDate(member.membershipExpiryDate) : 'Not set'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase text-navy/40">Last renewal</p>
+            <p className="text-navy">
+              {member.lastRenewalDate ? formatDate(member.lastRenewalDate) : 'Not yet renewed'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase text-navy/40">Member since</p>
+            <p className="text-navy">{formatDate(member.createdAt)}</p>
+          </div>
+        </CardContent>
+        <CardContent className="pt-0">
+          <p className="text-xs text-navy/40">
+            These dates are managed by your coach or club admin - contact them to renew your membership.
+          </p>
         </CardContent>
       </Card>
     </div>

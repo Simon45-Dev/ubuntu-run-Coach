@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { Pencil, Plus } from 'lucide-react'
+import { Download, Pencil, Plus } from 'lucide-react'
+import { utils, writeFile } from 'xlsx'
 import { getOrganisation } from '@/api/organisations'
 import { deleteCoach, listCoachesForOrganisation, resendCoachInvite } from '@/api/coaches'
 import { listRoster } from '@/api/athletes'
@@ -13,7 +14,7 @@ import {
   listClubMembers,
   resendClubMemberInvite,
 } from '@/api/clubMembers'
-import type { Coach } from '@/api/types'
+import type { ClubMember, Coach } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +32,30 @@ import {
 import { InviteCoachDialog } from './InviteCoachDialog'
 import { EditOrganisationDialog } from './EditOrganisationDialog'
 import { CreateClubMemberDialog } from './CreateClubMemberDialog'
+import { EditClubMemberDialog } from './EditClubMemberDialog'
 import { InviteLinkDialog } from '../roster/InviteLinkDialog'
+import { getMembershipStatus, type MembershipStatus } from './membershipStatus'
+import { toClubMemberExportRows } from './clubMembersExport'
+
+const MEMBERSHIP_STATUS_VARIANT: Record<MembershipStatus, 'good' | 'watch' | 'attention' | 'inactive'> = {
+  ACTIVE: 'good',
+  EXPIRING_SOON: 'watch',
+  EXPIRED: 'attention',
+  NO_EXPIRY: 'inactive',
+}
+const MEMBERSHIP_STATUS_LABEL: Record<MembershipStatus, string> = {
+  ACTIVE: 'Active',
+  EXPIRING_SOON: 'Expiring soon',
+  EXPIRED: 'Expired',
+  NO_EXPIRY: 'No expiry',
+}
+
+function exportClubMembersToExcel(members: ClubMember[], organisationName: string) {
+  const sheet = utils.json_to_sheet(toClubMemberExportRows(members))
+  const workbook = utils.book_new()
+  utils.book_append_sheet(workbook, sheet, 'Club Members')
+  writeFile(workbook, `${organisationName.replace(/[^a-z0-9]+/gi, '-')}-club-members.xlsx`)
+}
 
 const statusVariant = {
   ACTIVE: 'good',
@@ -72,6 +96,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
   const [removeId, setRemoveId] = useState<string | null>(null)
   const [addMemberOpen, setAddMemberOpen] = useState(false)
   const [memberInvite, setMemberInvite] = useState<{ token: string; expiresAt: string } | null>(null)
+  const [editingMember, setEditingMember] = useState<ClubMember | null>(null)
 
   const { data: organisation, isLoading: orgLoading } = useQuery({
     queryKey: ['organisation', organisationId],
@@ -252,10 +277,21 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
         <h2 className="text-lg font-semibold text-navy">
           Club Members{members && ` (${members.length})`}
         </h2>
-        <Button onClick={() => setAddMemberOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add member
-        </Button>
+        <div className="flex gap-2">
+          {members && members.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => exportClubMembersToExcel(members, organisation.name)}
+            >
+              <Download className="h-4 w-4" />
+              Export to Excel
+            </Button>
+          )}
+          <Button onClick={() => setAddMemberOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add member
+          </Button>
+        </div>
       </div>
 
       {membersLoading && <FullPageSpinner />}
@@ -276,11 +312,14 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Login status</TableHead>
+              <TableHead>Membership</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((member) => (
+            {members.map((member) => {
+              const membershipStatus = getMembershipStatus(member.membershipExpiryDate, new Date())
+              return (
               <TableRow key={member.id}>
                 <TableCell className="font-mono text-navy/60">{member.membershipNumber}</TableCell>
                 <TableCell className="font-medium text-navy">
@@ -295,7 +334,15 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
                   )}
                 </TableCell>
                 <TableCell>
+                  <Badge variant={MEMBERSHIP_STATUS_VARIANT[membershipStatus]}>
+                    {MEMBERSHIP_STATUS_LABEL[membershipStatus]}
+                  </Badge>
+                </TableCell>
+                <TableCell>
                   <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setEditingMember(member)}>
+                      Edit
+                    </Button>
                     {!member.user && (
                       <Button
                         variant="outline"
@@ -327,7 +374,8 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              )
+            })}
           </TableBody>
         </Table>
       )}
@@ -340,6 +388,14 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
           organisationId={organisationId}
           open={addMemberOpen}
           onOpenChange={setAddMemberOpen}
+        />
+      )}
+      {organisationId && (
+        <EditClubMemberDialog
+          organisationId={organisationId}
+          member={editingMember}
+          open={!!editingMember}
+          onOpenChange={(open) => !open && setEditingMember(null)}
         />
       )}
       {memberInvite && (

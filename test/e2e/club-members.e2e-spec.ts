@@ -107,6 +107,37 @@ describe('Club Members (e2e)', () => {
       .send({ address: '123 Main Road, Johannesburg' })
       .expect(200);
     expect(updateRes.body.address).toBe('123 Main Road, Johannesburg');
+
+    // Self-service cannot touch join/expiry/renewal dates - coach/admin only.
+    await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${memberId}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ membershipExpiryDate: '2099-01-01' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${memberId}`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .send({ joinDate: '2020-01-01' })
+      .expect(403);
+
+    const coachUpdateRes = await request(app.getHttpServer())
+      .patch(`/api/v1/club-members/${memberId}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ membershipExpiryDate: '2027-01-01', lastRenewalDate: '2026-01-01' })
+      .expect(200);
+    expect(coachUpdateRes.body.membershipExpiryDate).toContain('2027-01-01');
+    expect(coachUpdateRes.body.lastRenewalDate).toContain('2026-01-01');
+  });
+
+  it('idNumber and joinDate round-trip on create', async () => {
+    const coach = await registerCoach(app);
+    const createRes = await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-members`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ ...MEMBER_INPUT, idNumber: '9001015800089', joinDate: '2019-06-15' })
+      .expect(201);
+    expect(createRes.body.idNumber).toBe('9001015800089');
+    expect(createRes.body.joinDate).toContain('2019-06-15');
   });
 
   it('a coach from a different organisation gets 404, not the member data', async () => {

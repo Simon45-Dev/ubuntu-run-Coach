@@ -287,10 +287,20 @@ model ClubMember {
   membershipNumber String
   firstName        String
   lastName         String
+  idNumber         String?
   email            String
   phone            String?
   dateOfBirth      DateTime?
   address          String?
+
+  /// Overridable at creation (a club backfilling a member's real historical
+  /// join date) - defaults to creation time otherwise.
+  joinDate DateTime @default(now())
+
+  /// Coach/admin-controlled only - ClubMembersService.update rejects a
+  /// CLUB_MEMBER caller trying to set either of these themselves.
+  membershipExpiryDate DateTime?
+  lastRenewalDate      DateTime?
 
   nextOfKinName         String?
   nextOfKinPhone        String?

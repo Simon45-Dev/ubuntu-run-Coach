@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateString, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
+/**
+ * Field-level authorisation, not DTO-level: ClubMembersService restricts
+ * joinDate/membershipExpiryDate/lastRenewalDate to COACH/PLATFORM_ADMIN
+ * callers - a CLUB_MEMBER caller (self-service) is rejected if these are
+ * present, same reasoning as UpdateAthleteDto's coachId field.
+ */
 export class UpdateClubMemberDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -13,6 +19,11 @@ export class UpdateClubMemberDto {
   @IsString()
   @MinLength(1)
   lastName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idNumber?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -33,6 +44,21 @@ export class UpdateClubMemberDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({ description: 'Coach/admin-only' })
+  @IsOptional()
+  @IsDateString()
+  joinDate?: string;
+
+  @ApiPropertyOptional({ description: 'Coach/admin-only' })
+  @IsOptional()
+  @IsDateString()
+  membershipExpiryDate?: string;
+
+  @ApiPropertyOptional({ description: 'Coach/admin-only' })
+  @IsOptional()
+  @IsDateString()
+  lastRenewalDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
