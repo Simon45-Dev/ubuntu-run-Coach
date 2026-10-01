@@ -3,6 +3,7 @@ import { ClubEventResultStatus, ClubEventStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
+import { EmailService } from '../email/email.service';
 import { CreateClubEventDto } from './dto/create-club-event.dto';
 import { UpdateClubEventDto } from './dto/update-club-event.dto';
 import { CreateClubEventResultDto } from './dto/create-club-event-result.dto';
@@ -39,7 +40,10 @@ function rankResults<T extends { status: ClubEventResultStatus; finishTimeSecond
 
 @Injectable()
 export class ClubEventsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   /** COACH/PLATFORM_ADMIN/CLUB_ADMIN only (enforced by the controller's @Roles) - always created DRAFT. */
   async create(organisationId: string, dto: CreateClubEventDto) {
@@ -91,7 +95,7 @@ export class ClubEventsService {
   /** COACH/PLATFORM_ADMIN/CLUB_ADMIN only - name/date/distance, or publishing via status. */
   async update(ctx: AuthContext, id: string, dto: UpdateClubEventDto) {
     const event = await this.findEventForManager(ctx, id);
-    return this.prisma.clubEvent.update({
+    const updated = await this.prisma.clubEvent.update({
       where: { id: event.id },
       data: {
         name: dto.name,
@@ -100,6 +104,33 @@ export class ClubEventsService {
         status: dto.status,
       },
     });
+    if (
+      event.status !== ClubEventStatus.PUBLISHED &&
+      updated.status === ClubEventStatus.PUBLISHED
+    ) {
+      await this.notifyMembersOfPublishedEvent(updated);
+    }
+    return updated;
+  }
+
+  /** Every club member gets emailed directly (not via their user account, if any) - matches ClubMembersService.sendExpiryReminders. */
+  private async notifyMembersOfPublishedEvent(event: {
+    organisationId: string;
+    name: string;
+  }): Promise<void> {
+    const members = await this.prisma.clubMember.findMany({
+      where: { organisationId: event.organisationId, deletedAt: null },
+      select: { email: true },
+    });
+    await Promise.all(
+      members.map((member) =>
+        this.emailService.send({
+          to: member.email,
+          subject: `Results published: ${event.name}`,
+          text: `Hi,\n\nResults for "${event.name}" have been published. Log in to Ubuntu Run to see how you placed.\n\n- Ubuntu Run`,
+        }),
+      ),
+    );
   }
 
   async softDelete(ctx: AuthContext, id: string): Promise<void> {

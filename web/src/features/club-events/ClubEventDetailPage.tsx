@@ -3,13 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { Ban, CheckCircle, Plus, Trash2, Upload } from 'lucide-react'
+import { utils, writeFile } from 'xlsx'
+import { Ban, CheckCircle, Download, Plus, Trash2, Upload } from 'lucide-react'
 import {
   deleteClubEvent,
   deleteClubEventResult,
   getClubEvent,
   updateClubEvent,
 } from '@/api/clubEvents'
+import type { ClubEventDetail } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +31,14 @@ import { formatDate, formatDuration } from '@/lib/format'
 import { MEMBERSHIP_CATEGORY_LABELS } from '../admin/membershipCategory'
 import { AddResultDialog } from './AddResultDialog'
 import { ImportEventResultsCsvDialog } from './ImportEventResultsCsvDialog'
+import { toClubEventResultExportRows } from './clubEventResultsExport'
+
+function exportResultsToExcel(event: ClubEventDetail) {
+  const sheet = utils.json_to_sheet(toClubEventResultExportRows(event.results))
+  const workbook = utils.book_new()
+  utils.book_append_sheet(workbook, sheet, 'Results')
+  writeFile(workbook, `${event.name.replace(/[^a-z0-9]+/gi, '-')}-results.xlsx`)
+}
 
 const STATUS_VARIANT = { DRAFT: 'inactive', PUBLISHED: 'good' } as const
 const RESULT_STATUS_LABEL = { FINISHED: null, DNF: 'DNF', DNS: 'DNS' } as const
@@ -148,6 +158,12 @@ export function ClubEventDetailPage() {
                 ))}
               </SelectContent>
             </Select>
+          )}
+          {event.results.length > 0 && (
+            <Button variant="outline" onClick={() => exportResultsToExcel(event)}>
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
           )}
           {isManager && (
             <>

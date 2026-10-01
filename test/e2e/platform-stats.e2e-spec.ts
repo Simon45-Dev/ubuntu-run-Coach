@@ -4,6 +4,7 @@ import { PrismaService } from '../../src/database/prisma.service';
 import { createTestApp, cleanDatabase } from './utils/test-app';
 import {
   createAthleteForCoach,
+  createClubAdminForCoach,
   createPlatformAdmin,
   loginAs,
   registerCoach,
@@ -45,6 +46,8 @@ describe('Platform Stats (e2e)', () => {
     expect(before.body.totals.coaches).toBe(0);
     expect(before.body.totals.athletes).toBe(0);
     expect(before.body.totals.clubMembers).toBe(0);
+    expect(before.body.totals.clubAdmins).toBe(0);
+    expect(before.body.totals.clubEvents).toBe(0);
     expect(before.body.totals.usersByStatus.ACTIVE).toBe(1); // the admin itself
     expect(before.body.weeklySignups).toHaveLength(8);
     expect(before.body.recentOrganisations).toEqual([]);
@@ -56,6 +59,12 @@ describe('Platform Stats (e2e)', () => {
       .set('Authorization', `Bearer ${coach.accessToken}`)
       .send({ firstName: 'Test', lastName: 'Member', email: 'stats-member@example.test' })
       .expect(201);
+    await createClubAdminForCoach(app, coach.accessToken, coach.organisationId);
+    await request(app.getHttpServer())
+      .post(`/api/v1/organisations/${coach.organisationId}/club-events`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .send({ name: 'Stats Test Event', eventDate: new Date().toISOString() })
+      .expect(201);
 
     const after = await request(app.getHttpServer())
       .get('/api/v1/platform-stats')
@@ -65,9 +74,11 @@ describe('Platform Stats (e2e)', () => {
     expect(after.body.totals.coaches).toBe(1);
     expect(after.body.totals.athletes).toBe(1);
     expect(after.body.totals.clubMembers).toBe(1);
-    // createAthleteForCoach accepts the invite internally, so all three
-    // users (admin, coach, athlete) are ACTIVE by the time this resolves.
-    expect(after.body.totals.usersByStatus.ACTIVE).toBe(3);
+    expect(after.body.totals.clubAdmins).toBe(1);
+    expect(after.body.totals.clubEvents).toBe(1);
+    // createAthleteForCoach and createClubAdminForCoach both accept their
+    // invite internally, so all four users are ACTIVE by the time this resolves.
+    expect(after.body.totals.usersByStatus.ACTIVE).toBe(4);
     expect(after.body.totals.usersByStatus.INVITED).toBe(0);
     expect(after.body.recentOrganisations).toHaveLength(1);
     expect(after.body.recentOrganisations[0].name).toBe('Stats Test Org');

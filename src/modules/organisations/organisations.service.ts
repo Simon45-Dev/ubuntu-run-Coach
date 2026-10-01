@@ -4,6 +4,7 @@ import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AvatarStorageService } from '../../common/storage/avatar-storage.service';
+import { EmailService } from '../email/email.service';
 import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
 import { SuspendOrganisationDto } from './dto/suspend-organisation.dto';
@@ -27,7 +28,28 @@ export class OrganisationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly avatarStorage: AvatarStorageService,
+    private readonly emailService: EmailService,
   ) {}
+
+  private async notifyCoaches(
+    organisationId: string,
+    subject: string,
+    body: string,
+  ): Promise<void> {
+    const coaches = await this.prisma.coach.findMany({
+      where: { organisationId, deletedAt: null },
+      include: { user: { select: { email: true, name: true } } },
+    });
+    await Promise.all(
+      coaches.map((coach) =>
+        this.emailService.send({
+          to: coach.user.email,
+          subject,
+          text: `Hi ${coach.user.name},\n\n${body}\n\n- Ubuntu Run`,
+        }),
+      ),
+    );
+  }
 
   /**
    * PLATFORM_ADMIN only (route already restricted by @Roles). No
@@ -115,10 +137,16 @@ export class OrganisationsService {
     if (!org) {
       throw new NotFoundException('Organisation not found');
     }
-    return this.prisma.organisation.update({
+    const updated = await this.prisma.organisation.update({
       where: { id },
       data: { suspendedAt: new Date(), suspensionReason: dto.reason },
     });
+    await this.notifyCoaches(
+      id,
+      'Your Ubuntu Run organisation has been suspended',
+      `Your organisation "${org.name}" has been suspended. Reason: ${dto.reason}\n\nEveryone in your organisation will be unable to log in until it's reactivated. Please contact support if you have questions.`,
+    );
+    return updated;
   }
 
   /** PLATFORM_ADMIN only - route already restricted by @Roles. */
@@ -127,10 +155,16 @@ export class OrganisationsService {
     if (!org) {
       throw new NotFoundException('Organisation not found');
     }
-    return this.prisma.organisation.update({
+    const updated = await this.prisma.organisation.update({
       where: { id },
       data: { suspendedAt: null, suspensionReason: null },
     });
+    await this.notifyCoaches(
+      id,
+      'Your Ubuntu Run organisation has been reactivated',
+      `Your organisation "${org.name}" has been reactivated. Everyone can log in again.`,
+    );
+    return updated;
   }
 
   /** PLATFORM_ADMIN only - route already restricted by @Roles. */

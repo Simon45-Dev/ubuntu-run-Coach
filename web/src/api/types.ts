@@ -436,6 +436,8 @@ export interface PlatformStats {
     coaches: number
     athletes: number
     clubMembers: number
+    clubAdmins: number
+    clubEvents: number
     usersByStatus: Record<UserStatus, number>
   }
   weeklySignups: WeeklySignupEntry[]
