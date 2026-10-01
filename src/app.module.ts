@@ -14,6 +14,7 @@ import { CoachesModule } from './modules/coaches/coaches.module';
 import { AthletesModule } from './modules/athletes/athletes.module';
 import { ClubMembersModule } from './modules/club-members/club-members.module';
 import { ClubAdminsModule } from './modules/club-admins/club-admins.module';
+import { ClubEventsModule } from './modules/club-events/club-events.module';
 import { GroupsModule } from './modules/groups/groups.module';
 import { TemplatesModule } from './modules/templates/templates.module';
 import { RaceGoalsModule } from './modules/race-goals/race-goals.module';
@@ -45,6 +46,7 @@ import { PlatformStatsModule } from './modules/platform-stats/platform-stats.mod
     AthletesModule,
     ClubMembersModule,
     ClubAdminsModule,
+    ClubEventsModule,
     GroupsModule,
     TemplatesModule,
     RaceGoalsModule,

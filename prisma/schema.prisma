@@ -136,6 +136,7 @@ model Organisation {
   subscriptions Subscription[]
   clubMembers   ClubMember[]
   clubAdmins    ClubAdmin[]
+  clubEvents    ClubEvent[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -328,7 +329,8 @@ model ClubMember {
   nextOfKinPhone        String?
   nextOfKinRelationship String?
 
-  payments ClubMemberPayment[]
+  payments     ClubMemberPayment[]
+  eventResults ClubEventResult[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -371,6 +373,61 @@ model ClubMemberPayment {
 
   @@index([clubMemberId])
   @@map("club_member_payments")
+}
+
+enum ClubEventStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ClubEventResultStatus {
+  FINISHED
+  DNF
+  DNS
+}
+
+/// A race/time trial a club ran, with member results published after the
+/// fact as a leaderboard. DRAFT lets a coach/admin stage results before
+/// members see them; only PUBLISHED events are visible to a CLUB_MEMBER
+/// (see ClubEventsService.findAllForOrg/findOne).
+model ClubEvent {
+  id             String          @id @default(uuid())
+  organisationId String
+  organisation   Organisation    @relation(fields: [organisationId], references: [id])
+  name           String
+  eventDate      DateTime
+  distance       String?
+  status         ClubEventStatus @default(DRAFT)
+
+  results ClubEventResult[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([organisationId])
+  @@map("club_events")
+}
+
+/// Rank is never stored - always computed on read (order by
+/// finishTimeSeconds among FINISHED results), so correcting a time never
+/// leaves stale rankings lying around. finishTimeSeconds is null for a
+/// DNF/DNS row.
+model ClubEventResult {
+  id                String                 @id @default(uuid())
+  clubEventId       String
+  clubEvent         ClubEvent              @relation(fields: [clubEventId], references: [id])
+  clubMemberId      String
+  clubMember        ClubMember             @relation(fields: [clubMemberId], references: [id])
+  finishTimeSeconds Int?
+  status            ClubEventResultStatus  @default(FINISHED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clubEventId, clubMemberId])
+  @@index([clubEventId])
+  @@map("club_event_results")
 }
 
 /// Scoped to one organisation; can manage that organisation's club

@@ -27,6 +27,8 @@ import { AuditLogPage } from '@/features/admin/AuditLogPage'
 import { UsersListPage } from '@/features/admin/UsersListPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 import { MyMembershipPage } from '@/features/club-members/MyMembershipPage'
+import { ClubEventsListPage } from '@/features/club-events/ClubEventsListPage'
+import { ClubEventDetailPage } from '@/features/club-events/ClubEventDetailPage'
 
 function RootRedirect() {
   const { ctx } = useAuth()
@@ -77,6 +79,10 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute allow={['CLUB_ADMIN']} />}>
             <Route path="/my-club" element={<MyClubPage />} />
+          </Route>
+          <Route element={<ProtectedRoute allow={['COACH', 'CLUB_ADMIN', 'CLUB_MEMBER']} />}>
+            <Route path="/events" element={<ClubEventsListPage />} />
+            <Route path="/events/:eventId" element={<ClubEventDetailPage />} />
           </Route>
           <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
           <Route path="/athletes/:athleteId/plans/:planId" element={<PlanDetailPage />} />

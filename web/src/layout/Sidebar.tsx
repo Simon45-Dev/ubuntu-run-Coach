@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Settings,
   Siren,
+  Trophy,
   UserCog,
   Users,
   UsersRound,
@@ -136,6 +137,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <NavLink to="/team" className={linkClass}>
               <Building2 className="h-4 w-4" />
               My Team
+            </NavLink>
+          )}
+          {(isCoach || isClubAdmin || isClubMember) && (
+            <NavLink to="/events" className={linkClass}>
+              <Trophy className="h-4 w-4" />
+              Events
             </NavLink>
           )}
           {isAthlete && ctx.athleteId && (

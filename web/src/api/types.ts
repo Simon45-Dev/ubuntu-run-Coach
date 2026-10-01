@@ -148,6 +148,44 @@ export interface ClubMemberPayment {
   createdAt: string
 }
 
+export const CLUB_EVENT_STATUSES = ['DRAFT', 'PUBLISHED'] as const
+export type ClubEventStatus = (typeof CLUB_EVENT_STATUSES)[number]
+
+export const CLUB_EVENT_RESULT_STATUSES = ['FINISHED', 'DNF', 'DNS'] as const
+export type ClubEventResultStatus = (typeof CLUB_EVENT_RESULT_STATUSES)[number]
+
+export interface ClubEvent {
+  id: string
+  organisationId: string
+  name: string
+  eventDate: string
+  distance: string | null
+  status: ClubEventStatus
+  createdAt: string
+  updatedAt: string
+}
+
+/** rank is computed server-side, null for a DNF/DNS row. */
+export interface ClubEventResult {
+  id: string
+  clubEventId: string
+  clubMemberId: string
+  finishTimeSeconds: number | null
+  status: ClubEventResultStatus
+  rank: number | null
+  clubMember: {
+    id: string
+    firstName: string
+    lastName: string
+    membershipNumber: string
+    membershipCategory: MembershipCategory | null
+  }
+}
+
+export interface ClubEventDetail extends ClubEvent {
+  results: ClubEventResult[]
+}
+
 export interface GroupMembership {
   id: string
   athleteId: string
