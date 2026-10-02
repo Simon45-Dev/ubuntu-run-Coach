@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { AxiosError } from 'axios'
 import { useAuth } from './AuthProvider'
-import logo from '@/assets/logo.png'
+import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,7 +28,7 @@ export function AcceptInvitePage() {
       <div className="flex min-h-screen items-center justify-center bg-mist px-4">
         <Card className="w-full max-w-sm">
           <CardContent className="pt-6 text-center">
-            <img src={logo} alt="Ubuntu Run" className="mx-auto mb-6 h-auto w-40" />
+            <Logo background="light" size="compact" className="mx-auto mb-6" />
             <p className="text-sm text-navy">
               This invite link is missing its token. Ask your coach to resend it.
             </p>
@@ -65,7 +65,7 @@ export function AcceptInvitePage() {
     <div className="flex min-h-screen items-center justify-center bg-mist px-4">
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
-          <img src={logo} alt="Ubuntu Run" className="mx-auto mb-6 h-auto w-40" />
+          <Logo background="light" size="compact" className="mx-auto mb-6" />
           <p className="mb-4 text-center text-sm text-navy/60">
             Set a password to activate your account.
           </p>

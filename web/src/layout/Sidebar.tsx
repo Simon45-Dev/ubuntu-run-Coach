@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { getOrganisation } from '@/api/organisations'
 import { useAuth } from '@/auth/AuthProvider'
-import logo from '@/assets/logo.png'
+import { Logo } from '@/components/Logo'
 import { resolveAvatarUrl } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -41,8 +41,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-      isActive ? 'bg-green/10 text-green' : 'text-white/70 hover:bg-white/10 hover:text-white',
+      'flex items-center gap-3 rounded-md border-l-2 px-3 py-2 text-sm font-medium transition-colors',
+      isActive
+        ? 'border-orange bg-green/10 text-green'
+        : 'border-transparent text-white/70 hover:bg-white/10 hover:text-white',
     )
 
   return (
@@ -55,11 +57,11 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <img
-          src={orgLogo ?? logo}
-          alt={organisation?.name ?? 'Ubuntu Run'}
-          className="mb-6 h-auto w-full px-2"
-        />
+        {orgLogo ? (
+          <img src={orgLogo} alt={organisation?.name ?? 'Ubuntu Run'} className="mb-6 h-auto w-full px-2" />
+        ) : (
+          <Logo className="mb-6 px-2" />
+        )}
         <nav className="flex flex-1 flex-col gap-1" onClick={onClose}>
           {isAdmin && (
             <NavLink to="/admin" end className={linkClass}>

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent } from '@/components/ui/card'
 import { CreateAthleteDialog } from './CreateAthleteDialog'
 
 const statusVariant = {
@@ -43,6 +44,33 @@ export function RosterListPage() {
       </div>
 
       {isLoading && <FullPageSpinner />}
+
+      {!isLoading && athletes && athletes.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:max-w-xl">
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-2xl font-bold text-navy">{athletes.length}</p>
+              <p className="text-xs text-navy/50">Total athletes</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-2xl font-bold text-navy">
+                {athletes.filter((a) => a.user.status === 'ACTIVE').length}
+              </p>
+              <p className="text-xs text-navy/50">Active</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-2xl font-bold text-navy">
+                {athletes.filter((a) => a.user.status === 'INVITED').length}
+              </p>
+              <p className="text-xs text-navy/50">Pending invite</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {!isLoading && athletes && athletes.length === 0 && (
         <EmptyState

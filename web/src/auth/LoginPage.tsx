@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { AxiosError } from 'axios'
 import { useAuth } from './AuthProvider'
-import logo from '@/assets/logo.png'
+import { Logo } from '@/components/Logo'
 import loginBackground from '@/assets/login-background.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,7 +53,7 @@ export function LoginPage() {
       </p>
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
-          <img src={logo} alt="Ubuntu Run" className="mx-auto mb-6 h-auto w-40" />
+          <Logo background="light" size="compact" className="mx-auto mb-6" />
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">Email</Label>
