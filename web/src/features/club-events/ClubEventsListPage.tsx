@@ -7,7 +7,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { FullPageSpinner } from '@/components/Spinner'
+import { CardGridSkeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/EmptyState'
 import { formatDate } from '@/lib/format'
 import { CreateClubEventDialog } from './CreateClubEventDialog'
@@ -41,7 +41,7 @@ export function ClubEventsListPage() {
         )}
       </div>
 
-      {isLoading && <FullPageSpinner />}
+      {isLoading && <CardGridSkeleton />}
 
       {!isLoading && events && events.length === 0 && (
         <EmptyState

@@ -6,7 +6,7 @@ import { listGroups } from '@/api/groups'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { FullPageSpinner } from '@/components/Spinner'
+import { CardGridSkeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/EmptyState'
 import { CreateGroupDialog } from './CreateGroupDialog'
 
@@ -34,7 +34,7 @@ export function GroupsListPage() {
         </Button>
       </div>
 
-      {isLoading && <FullPageSpinner />}
+      {isLoading && <CardGridSkeleton />}
 
       {!isLoading && groups && groups.length === 0 && (
         <EmptyState

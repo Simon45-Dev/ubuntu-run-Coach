@@ -11,8 +11,9 @@ import type { Athlete, Message } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
+import { Skeleton } from '@/components/ui/skeleton'
+import { WeeklyVolumeChart } from '@/components/charts/WeeklyVolumeChart'
 import { formatDate, formatDistance } from '@/lib/format'
 import { WORKOUT_TYPE_STYLES } from '@/features/plans/workoutTypeStyles'
 import { aggregateAnalytics } from './dashboardUtil'
@@ -83,23 +84,21 @@ export function CoachDashboardPage() {
 
   const fanoutRoster = roster?.slice(0, ROSTER_FANOUT_CAP) ?? []
 
-  const { data: todaysTraining } = useQuery({
+  const { data: todaysTraining, isLoading: todaysTrainingLoading } = useQuery({
     queryKey: ['dashboard-today', coachId, fanoutRoster.map((a) => a.id)],
     queryFn: () => loadTodaysTraining(fanoutRoster),
     enabled: !rosterLoading && fanoutRoster.length > 0,
   })
-  const { data: recentMessages } = useQuery({
+  const { data: recentMessages, isLoading: recentMessagesLoading } = useQuery({
     queryKey: ['dashboard-messages', coachId, fanoutRoster.map((a) => a.id)],
     queryFn: () => loadRecentMessages(fanoutRoster),
     enabled: !rosterLoading && fanoutRoster.length > 0,
   })
-  const { data: performance } = useQuery({
+  const { data: performance, isLoading: performanceLoading } = useQuery({
     queryKey: ['dashboard-performance', coachId, fanoutRoster.map((a) => a.id)],
     queryFn: () => loadPerformanceOverview(fanoutRoster),
     enabled: !rosterLoading && fanoutRoster.length > 0,
   })
-
-  if (rosterLoading) return <FullPageSpinner />
 
   const total = roster?.length ?? 0
   const active = roster?.filter((a) => a.user.status === 'ACTIVE').length ?? 0
@@ -124,35 +123,48 @@ export function CoachDashboardPage() {
               <CardTitle>My Athletes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xl font-bold text-navy">{total}</p>
-                  <p className="text-xs text-navy/50">Total athletes</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-navy">{active}</p>
-                  <p className="text-xs text-navy/50">Active</p>
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-navy">{invited}</p>
-                  <p className="text-xs text-navy/50">Pending invite</p>
-                </div>
-              </div>
-
-              {recentAthletes.length > 0 && (
-                <div className="mt-6 flex flex-col gap-1">
-                  <p className="mb-1 text-xs font-medium uppercase text-navy/40">Recent athletes</p>
-                  {recentAthletes.map((athlete) => (
-                    <Link
-                      key={athlete.id}
-                      to={`/athletes/${athlete.id}`}
-                      className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-mist"
-                    >
-                      <span className="font-medium text-navy">{athlete.user.name}</span>
-                      <span className="text-navy/50">{athlete.goal ?? '-'}</span>
-                    </Link>
+              {rosterLoading ? (
+                <div className="grid grid-cols-3 gap-4">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex flex-col gap-2">
+                      <Skeleton className="h-6 w-8" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
                   ))}
                 </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xl font-bold text-navy">{total}</p>
+                      <p className="text-xs text-navy/50">Total athletes</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold text-navy">{active}</p>
+                      <p className="text-xs text-navy/50">Active</p>
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold text-navy">{invited}</p>
+                      <p className="text-xs text-navy/50">Pending invite</p>
+                    </div>
+                  </div>
+
+                  {recentAthletes.length > 0 && (
+                    <div className="mt-6 flex flex-col gap-1">
+                      <p className="mb-1 text-xs font-medium uppercase text-navy/40">Recent athletes</p>
+                      {recentAthletes.map((athlete) => (
+                        <Link
+                          key={athlete.id}
+                          to={`/athletes/${athlete.id}`}
+                          className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-mist"
+                        >
+                          <span className="font-medium text-navy">{athlete.user.name}</span>
+                          <span className="text-navy/50">{athlete.goal ?? '-'}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -162,7 +174,13 @@ export function CoachDashboardPage() {
               <CardTitle>Today's Training</CardTitle>
             </CardHeader>
             <CardContent>
-              {!todaysTraining || todaysTraining.length === 0 ? (
+              {rosterLoading || todaysTrainingLoading ? (
+                <div className="flex flex-col gap-2">
+                  {[0, 1].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : !todaysTraining || todaysTraining.length === 0 ? (
                 <EmptyState title="Nothing scheduled today" description="No roster workouts fall on today's date." />
               ) : (
                 <div className="flex flex-col gap-2">
@@ -191,38 +209,43 @@ export function CoachDashboardPage() {
               <CardTitle>Athlete Performance Overview</CardTitle>
             </CardHeader>
             <CardContent>
-              {performance && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xl font-bold text-navy">{formatDistance(performance.avgWeeklyDistanceKm)}</p>
-                    <p className="text-xs text-navy/50">Avg weekly distance</p>
+              {rosterLoading || performanceLoading ? (
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xl font-bold text-navy">
-                      {performance.completionRate === null ? '-' : `${Math.round(performance.completionRate * 100)}%`}
-                    </p>
-                    <p className="text-xs text-navy/50">Completion rate</p>
-                  </div>
+                  <Skeleton className="h-32 w-full" />
                 </div>
-              )}
-              {performance && performance.weeklyTrend.length > 0 && (
-                <div className="mt-6 flex flex-col gap-2">
-                  <p className="mb-1 text-xs font-medium uppercase text-navy/40">Training volume</p>
-                  {performance.weeklyTrend.slice(-6).map((week) => {
-                    const rate = week.scheduled === 0 ? 0 : week.completed / week.scheduled
-                    return (
-                      <div key={week.weekStart} className="flex items-center gap-3">
-                        <p className="w-16 shrink-0 text-xs text-navy/50">{formatDate(week.weekStart, 'd MMM')}</p>
-                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-navy/10">
-                          <div className="h-full rounded-full bg-green" style={{ width: `${Math.round(rate * 100)}%` }} />
-                        </div>
-                        <p className="w-20 shrink-0 text-right text-xs text-navy/60">
-                          {formatDistance(week.distanceKm)}
-                        </p>
+              ) : (
+                <>
+                  {performance && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xl font-bold text-navy">{formatDistance(performance.avgWeeklyDistanceKm)}</p>
+                        <p className="text-xs text-navy/50">Avg weekly distance</p>
                       </div>
-                    )
-                  })}
-                </div>
+                      <div>
+                        <p className="text-xl font-bold text-navy">
+                          {performance.completionRate === null ? '-' : `${Math.round(performance.completionRate * 100)}%`}
+                        </p>
+                        <p className="text-xs text-navy/50">Completion rate</p>
+                      </div>
+                    </div>
+                  )}
+                  {performance && performance.weeklyTrend.length > 0 && (
+                    <div className="mt-6">
+                      <p className="mb-1 text-xs font-medium uppercase text-navy/40">Training volume</p>
+                      <WeeklyVolumeChart weeklyTrend={performance.weeklyTrend.slice(-6)} />
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -258,7 +281,13 @@ export function CoachDashboardPage() {
               <CardTitle>Recent Messages</CardTitle>
             </CardHeader>
             <CardContent>
-              {!recentMessages || recentMessages.length === 0 ? (
+              {rosterLoading || recentMessagesLoading ? (
+                <div className="flex flex-col gap-3">
+                  {[0, 1, 2].map((i) => (
+                    <Skeleton key={i} className="h-8 w-full" />
+                  ))}
+                </div>
+              ) : !recentMessages || recentMessages.length === 0 ? (
                 <p className="text-sm text-navy/50">No messages yet.</p>
               ) : (
                 <div className="flex flex-col gap-1">

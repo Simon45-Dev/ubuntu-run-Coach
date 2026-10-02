@@ -10,8 +10,9 @@ import { getCurrentUser } from '@/api/users'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
+import { Skeleton } from '@/components/ui/skeleton'
+import { WeeklyVolumeChart } from '@/components/charts/WeeklyVolumeChart'
 import { formatDate, formatDistance, formatDuration } from '@/lib/format'
 import { WORKOUT_TYPE_STYLES } from '@/features/plans/workoutTypeStyles'
 import { pickUpcomingWorkouts, computePlanWeek } from './dashboardUtil'
@@ -28,7 +29,7 @@ export function AthleteHomePage() {
   const athleteId = ctx?.athleteId ?? ''
 
   const { data: user } = useQuery({ queryKey: ['me'], queryFn: getCurrentUser })
-  const { data: athlete } = useQuery({
+  const { data: athlete, isLoading: athleteLoading } = useQuery({
     queryKey: ['athlete', athleteId],
     queryFn: () => getAthlete(athleteId),
     enabled: !!athleteId,
@@ -38,18 +39,16 @@ export function AthleteHomePage() {
     queryFn: () => loadUpcomingWorkouts(athleteId),
     enabled: !!athleteId,
   })
-  const { data: raceGoals } = useQuery({
+  const { data: raceGoals, isLoading: raceGoalsLoading } = useQuery({
     queryKey: ['race-goals', athleteId],
     queryFn: () => listRaceGoals(athleteId),
     enabled: !!athleteId,
   })
-  const { data: analytics } = useQuery({
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ['analytics', athleteId],
     queryFn: () => getAnalyticsSummary(athleteId),
     enabled: !!athleteId,
   })
-
-  if (plansLoading) return <FullPageSpinner />
 
   const now = new Date()
   const upcoming = planData ? pickUpcomingWorkouts(planData.workouts, now, 4) : []
@@ -76,7 +75,13 @@ export function AthleteHomePage() {
               <CardTitle>Today's Training</CardTitle>
             </CardHeader>
             <CardContent>
-              {todayWorkout ? (
+              {plansLoading ? (
+                <div className="flex flex-col gap-3">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-10 w-32" />
+                </div>
+              ) : todayWorkout ? (
                 <div className="flex flex-col gap-3">
                   <p className="text-lg font-semibold text-navy">{WORKOUT_TYPE_STYLES[todayWorkout.type].label}</p>
                   <p className="text-sm text-navy/60">
@@ -99,38 +104,44 @@ export function AthleteHomePage() {
               <CardTitle>Your Progress</CardTitle>
             </CardHeader>
             <CardContent>
-              {analytics && (
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xl font-bold text-navy">{formatDistance(analytics.volume.totalDistanceKm)}</p>
-                    <p className="text-xs text-navy/50">Total distance</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-navy">{formatDuration(analytics.volume.totalDurationSec)}</p>
-                    <p className="text-xs text-navy/50">Total time</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-navy">
-                      {analytics.adherence.rate === null ? '-' : `${Math.round(analytics.adherence.rate * 100)}%`}
-                    </p>
-                    <p className="text-xs text-navy/50">Completion rate</p>
-                  </div>
-                </div>
-              )}
-              {analytics && analytics.weeklyTrend.length > 0 && (
-                <div className="mt-6 flex flex-col gap-2">
-                  {analytics.weeklyTrend.slice(-6).map((week) => {
-                    const rate = week.scheduled === 0 ? 0 : week.completed / week.scheduled
-                    return (
-                      <div key={week.weekStart} className="flex items-center gap-3">
-                        <p className="w-16 shrink-0 text-xs text-navy/50">{formatDate(week.weekStart, 'd MMM')}</p>
-                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-navy/10">
-                          <div className="h-full rounded-full bg-green" style={{ width: `${Math.round(rate * 100)}%` }} />
-                        </div>
+              {analyticsLoading ? (
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="flex flex-col gap-2">
+                        <Skeleton className="h-6 w-14" />
+                        <Skeleton className="h-3 w-20" />
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
+                  <Skeleton className="h-32 w-full" />
                 </div>
+              ) : (
+                <>
+                  {analytics && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xl font-bold text-navy">{formatDistance(analytics.volume.totalDistanceKm)}</p>
+                        <p className="text-xs text-navy/50">Total distance</p>
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-navy">{formatDuration(analytics.volume.totalDurationSec)}</p>
+                        <p className="text-xs text-navy/50">Total time</p>
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold text-navy">
+                          {analytics.adherence.rate === null ? '-' : `${Math.round(analytics.adherence.rate * 100)}%`}
+                        </p>
+                        <p className="text-xs text-navy/50">Completion rate</p>
+                      </div>
+                    </div>
+                  )}
+                  {analytics && analytics.weeklyTrend.length > 0 && (
+                    <div className="mt-6">
+                      <WeeklyVolumeChart weeklyTrend={analytics.weeklyTrend.slice(-6)} />
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -167,7 +178,12 @@ export function AthleteHomePage() {
               <CardTitle>Your Goal</CardTitle>
             </CardHeader>
             <CardContent>
-              {nextGoal ? (
+              {raceGoalsLoading ? (
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              ) : nextGoal ? (
                 <div className="flex flex-col gap-2">
                   <p className="text-lg font-semibold text-navy">{nextGoal.raceName}</p>
                   <p className="text-sm text-navy/60">
@@ -199,7 +215,9 @@ export function AthleteHomePage() {
               <CardTitle>Your Coach</CardTitle>
             </CardHeader>
             <CardContent>
-              {athlete?.coach ? (
+              {athleteLoading ? (
+                <Skeleton className="h-6 w-full" />
+              ) : athlete?.coach ? (
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-navy">{athlete.coach.user.name}</p>
                   <Link to="/messages">

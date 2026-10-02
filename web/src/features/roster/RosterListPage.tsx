@@ -6,10 +6,10 @@ import { listRoster } from '@/api/athletes'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { CreateAthleteDialog } from './CreateAthleteDialog'
 
 const statusVariant = {
@@ -43,7 +43,30 @@ export function RosterListPage() {
         </Button>
       </div>
 
-      {isLoading && <FullPageSpinner />}
+      {isLoading && (
+        <div className="flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:max-w-xl">
+            {[0, 1, 2].map((i) => (
+              <Card key={i}>
+                <CardContent className="flex flex-col gap-2 pt-6">
+                  <Skeleton className="h-7 w-10" />
+                  <Skeleton className="h-3 w-20" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-6 border-b border-navy/10 py-3">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!isLoading && athletes && athletes.length > 0 && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:max-w-xl">

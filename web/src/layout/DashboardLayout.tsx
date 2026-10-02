@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
+import { MobileBottomNav } from './MobileBottomNav'
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -11,11 +12,12 @@ export function DashboardLayout() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-8">
           <div className="mx-auto w-full max-w-7xl">
             <Outlet />
           </div>
         </main>
+        <MobileBottomNav />
       </div>
     </div>
   )
