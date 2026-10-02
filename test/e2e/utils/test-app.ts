@@ -53,6 +53,7 @@ export async function cleanDatabase(prisma: PrismaService): Promise<void> {
   await prisma.group.deleteMany();
   await prisma.personalBest.deleteMany();
   await prisma.refreshToken.deleteMany();
+  await prisma.pushSubscription.deleteMany();
   await prisma.athlete.deleteMany();
   await prisma.clubMemberPayment.deleteMany();
   await prisma.clubEventResult.deleteMany();

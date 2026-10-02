@@ -26,6 +26,7 @@ import { TrainingPlansModule } from './modules/training-plans/training-plans.mod
 import { WorkoutsModule } from './modules/workouts/workouts.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PushNotificationsModule } from './modules/push-notifications/push-notifications.module';
 import { ConsentsModule } from './modules/consents/consents.module';
 import { CheckInsModule } from './modules/check-ins/check-ins.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
@@ -58,6 +59,7 @@ import { PlatformStatsModule } from './modules/platform-stats/platform-stats.mod
     WorkoutsModule,
     MessagesModule,
     NotificationsModule,
+    PushNotificationsModule,
     ConsentsModule,
     CheckInsModule,
   ],

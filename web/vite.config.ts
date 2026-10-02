@@ -12,10 +12,17 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
+      // injectManifest (not the default generateSW) - a hand-written service
+      // worker (src/sw.ts) is required to listen for push/notificationclick
+      // events; see that file for the self.skipWaiting/clients.claim calls
+      // that generateSW's autoUpdate handled implicitly and this mode does not.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       // Precaches only the static app shell (JS/CSS/fonts/icons) - no
       // runtime caching of /api/v1/* requests, so athlete/training data is
       // always fetched fresh and never risks going stale behind a cache.
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
       },
       manifest: {

@@ -16,6 +16,11 @@ export default () => ({
     fromAddress: process.env.EMAIL_FROM_ADDRESS ?? 'no-reply@ubunturun.dev',
     fromName: process.env.EMAIL_FROM_NAME,
   },
+  push: {
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
+    vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:support@ubunturun.dev',
+  },
   storage: {
     s3Endpoint: process.env.S3_ENDPOINT,
     s3Region: process.env.S3_REGION,

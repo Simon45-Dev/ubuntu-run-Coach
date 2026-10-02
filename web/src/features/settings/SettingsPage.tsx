@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FullPageSpinner } from '@/components/Spinner'
 import { AvatarInitials } from '@/components/ui/avatar'
 import { resolveAvatarUrl } from '@/lib/format'
+import { PushNotificationsCard } from './PushNotificationsCard'
 
 const codeSchema = z.object({ code: z.string().length(6, 'Enter the 6-digit code') })
 type CodeForm = z.infer<typeof codeSchema>
@@ -229,6 +230,8 @@ export function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <PushNotificationsCard />
     </div>
   )
 }

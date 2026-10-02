@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateClubEventDto } from './dto/create-club-event.dto';
 import { UpdateClubEventDto } from './dto/update-club-event.dto';
 import { CreateClubEventResultDto } from './dto/create-club-event-result.dto';
@@ -43,6 +44,7 @@ export class ClubEventsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /** COACH/PLATFORM_ADMIN/CLUB_ADMIN only (enforced by the controller's @Roles) - always created DRAFT. */
@@ -113,14 +115,21 @@ export class ClubEventsService {
     return updated;
   }
 
-  /** Every club member gets emailed directly (not via their user account, if any) - matches ClubMembersService.sendExpiryReminders. */
+  /**
+   * Every club member gets emailed directly (not via their user account, if
+   * any) - matches ClubMembersService.sendExpiryReminders, and is the only
+   * channel for a member with no login. A member who IS linked to a user
+   * account additionally gets an in-app/push notification - intentionally
+   * both channels, not a duplicate to dedupe.
+   */
   private async notifyMembersOfPublishedEvent(event: {
+    id: string;
     organisationId: string;
     name: string;
   }): Promise<void> {
     const members = await this.prisma.clubMember.findMany({
       where: { organisationId: event.organisationId, deletedAt: null },
-      select: { email: true },
+      select: { email: true, userId: true },
     });
     await Promise.all(
       members.map((member) =>
@@ -128,6 +137,19 @@ export class ClubEventsService {
           to: member.email,
           subject: `Results published: ${event.name}`,
           text: `Hi,\n\nResults for "${event.name}" have been published. Log in to Ubuntu Run to see how you placed.\n\n- Ubuntu Run`,
+        }),
+      ),
+    );
+
+    const linkedUserIds = members
+      .map((member) => member.userId)
+      .filter((userId): userId is string => userId !== null);
+    await Promise.all(
+      linkedUserIds.map((userId) =>
+        this.notificationsService.create({
+          recipientId: userId,
+          type: 'CLUB_EVENT_PUBLISHED',
+          payload: { clubEventId: event.id },
         }),
       ),
     );

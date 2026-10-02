@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
 import { buildTrainingPlanScopeFilter } from '../../common/scope/scope-filters';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateTrainingPlanDto } from './dto/create-training-plan.dto';
 import { UpdateTrainingPlanDto } from './dto/update-training-plan.dto';
 
@@ -17,7 +18,10 @@ function validatePlanDates(dto: Pick<CreateTrainingPlanDto, 'startDate' | 'endDa
 
 @Injectable()
 export class TrainingPlansService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /** Route is @Roles(COACH, PLATFORM_ADMIN) - ATHLETE never reaches here. */
   async create(ctx: AuthContext, athleteId: string, dto: CreateTrainingPlanDto) {
@@ -38,7 +42,7 @@ export class TrainingPlansService {
 
     const { startDate, endDate } = validatePlanDates(dto);
 
-    return this.prisma.trainingPlan.create({
+    const plan = await this.prisma.trainingPlan.create({
       data: {
         organisationId: athlete.organisationId,
         coachId: athlete.coachId,
@@ -50,9 +54,21 @@ export class TrainingPlansService {
         phase: dto.phase,
       },
     });
+
+    await this.notificationsService.create({
+      recipientId: athlete.userId,
+      type: 'TRAINING_PLAN_ASSIGNED',
+      payload: { trainingPlanId: plan.id },
+    });
+
+    return plan;
   }
 
-  /** Route is @Roles(COACH, PLATFORM_ADMIN) - ATHLETE never reaches here. */
+  /**
+   * Route is @Roles(COACH, PLATFORM_ADMIN) - ATHLETE never reaches here.
+   * Does not notify each group member individually - a group-assigned plan
+   * is a known gap, not an oversight (see the plan this was built from).
+   */
   async createForGroup(ctx: AuthContext, groupId: string, dto: CreateTrainingPlanDto) {
     const group = await this.prisma.group.findFirst({
       where: { id: groupId, deletedAt: null },

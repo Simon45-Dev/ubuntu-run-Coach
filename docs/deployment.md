@@ -188,6 +188,33 @@ first one.
 **Deferred for the pilot**: neither external-ping option above has actually
 been set up yet - do this before relying on reminders in practice.
 
+## 8. Web Push notifications
+
+In-app notifications (the bell icon) optionally also fire a real OS-level
+push notification to a user's device/browser, via the standard Web Push
+protocol (VAPID), for three events: a new direct message, a training plan
+being assigned, and a club event being published.
+
+This is entirely optional and off by default - leaving the env vars below
+unset keeps the feature fully, safely disabled (push payloads just get
+logged to the server console instead of sent, matching `BREVO_API_KEY`'s
+own dev-safe fallback), and the frontend hides the "Push notifications" card
+in Settings when no public key is configured.
+
+**One-time setup, per environment (local/Render/Vercel):**
+
+1. Generate a VAPID keypair: `npx -y web-push generate-vapid-keys`. This pair
+   is long-lived - regenerating it invalidates every existing device
+   subscription, so treat it as a secret to generate once, not rotate
+   casually.
+2. Set on Render (backend): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+   `VAPID_SUBJECT` (a `mailto:` address the push services can use to contact
+   you if something's wrong with your usage - required by the Web Push
+   protocol itself).
+3. Set on Vercel (frontend): `VITE_VAPID_PUBLIC_KEY` - must be the exact same
+   public key as step 2, or every subscribe attempt will register a device
+   the backend can't actually send to.
+
 ## Gotchas hit during setup (and how to avoid repeating them)
 
 - **`npm ci` failing with `nest: not found`** - `NODE_ENV=production` makes
