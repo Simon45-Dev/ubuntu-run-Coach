@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { TrendingUp } from 'lucide-react'
 import { getAnalyticsSummary } from '@/api/analytics'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FullPageSpinner } from '@/components/Spinner'
@@ -50,6 +51,7 @@ export function AnalyticsTab({ athleteId }: { athleteId: string }) {
         <CardContent>
           {weeklyTrend.length === 0 ? (
             <EmptyState
+              icon={TrendingUp}
               title="No training data yet"
               description="Weekly trends appear once workouts are scheduled and completed."
             />

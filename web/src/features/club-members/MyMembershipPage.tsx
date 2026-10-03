@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
+import { Wallet } from 'lucide-react'
 import { getClubMember, updateClubMember } from '@/api/clubMembers'
 import { listClubMemberPayments } from '@/api/clubMemberPayments'
 import { getOrganisation } from '@/api/organisations'
@@ -250,7 +251,7 @@ export function MyMembershipPage() {
         </CardHeader>
         <CardContent>
           {!payments || payments.length === 0 ? (
-            <EmptyState title="No payments recorded yet" />
+            <EmptyState icon={Wallet} title="No payments recorded yet" />
           ) : (
             <Table>
               <TableHeader>

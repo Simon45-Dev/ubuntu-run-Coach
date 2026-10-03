@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
-import { Ban, Building2, CheckCircle, Download, Pencil, Plus, Upload, Wallet, X } from 'lucide-react'
+import { Ban, Building2, CheckCircle, Download, IdCard, Pencil, Plus, Upload, UserCog, Users, Wallet, X } from 'lucide-react'
 import { utils, writeFile } from 'xlsx'
 import {
   deleteOrganisationLogo,
@@ -445,6 +445,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
 
           {!coachesLoading && coaches && coaches.length === 0 && (
             <EmptyState
+              icon={Users}
               title="No coaches yet"
               description="Invite a coach to let them start onboarding athletes."
               action={<Button onClick={() => setInviteOpen(true)}>Invite coach</Button>}
@@ -508,6 +509,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
 
           {!clubAdminsLoading && clubAdmins && clubAdmins.length === 0 && (
             <EmptyState
+              icon={UserCog}
               title="No club admins yet"
               description="Invite someone to manage this club's membership without coaching access."
               action={<Button onClick={() => setInviteClubAdminOpen(true)}>Invite club admin</Button>}
@@ -647,6 +649,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
 
       {!membersLoading && members && members.length === 0 && (
         <EmptyState
+          icon={IdCard}
           title="No club members yet"
           description="Add a member to start tracking the club's roster."
           action={<Button onClick={() => setAddMemberOpen(true)}>Add member</Button>}
@@ -658,7 +661,7 @@ export function OrganisationDetailPage({ organisationId: organisationIdProp }: {
         {(() => {
           const filteredMembers = filterClubMembers(members, memberSearch, memberStatusFilter)
           if (filteredMembers.length === 0) {
-            return <EmptyState title="No club members match these filters" />
+            return <EmptyState icon={IdCard} title="No club members match these filters" />
           }
           return (
         <Table>

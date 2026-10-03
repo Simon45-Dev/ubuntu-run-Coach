@@ -36,6 +36,7 @@ export function OrganisationsListPage() {
 
       {!isLoading && organisations && organisations.length === 0 && (
         <EmptyState
+          icon={Building2}
           title="No organisations yet"
           description="Create one to start inviting coaches onto the platform."
           action={<Button onClick={() => setCreateOpen(true)}>New organisation</Button>}

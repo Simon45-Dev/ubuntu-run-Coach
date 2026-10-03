@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, X } from 'lucide-react'
+import { Plus, Users, X } from 'lucide-react'
 import { deleteGroup, getGroup, removeGroupMember, updateGroup } from '@/api/groups'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
@@ -125,7 +125,11 @@ export function GroupDetailPage() {
             </CardHeader>
             <CardContent>
               {group.memberships.length === 0 ? (
-                <EmptyState title="No members yet" description="Add athletes from your roster to this group." />
+                <EmptyState
+                  icon={Users}
+                  title="No members yet"
+                  description="Add athletes from your roster to this group."
+                />
               ) : (
                 <div className="flex flex-col divide-y divide-navy/10">
                   {group.memberships.map((membership) => (

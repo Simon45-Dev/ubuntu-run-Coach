@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { ClipboardList, Plus } from 'lucide-react'
 import { deleteTemplate, getTemplate, removeTemplateWorkout, updateTemplate } from '@/api/templates'
 import type { TemplateWorkout } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
@@ -128,6 +128,7 @@ export function TemplateDetailPage() {
         <CardContent>
           {template.workouts.length === 0 ? (
             <EmptyState
+              icon={ClipboardList}
               title="No workouts yet"
               description="Add workouts by day offset - day 0 is the plan's start date."
             />

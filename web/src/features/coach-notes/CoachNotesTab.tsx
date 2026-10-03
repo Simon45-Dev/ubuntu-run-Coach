@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { NotebookPen, Plus } from 'lucide-react'
 import { deleteCoachNote, listCoachNotes } from '@/api/coachNotes'
 import type { CoachNote } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
@@ -44,6 +44,7 @@ export function CoachNotesTab({ athleteId }: { athleteId: string }) {
 
       {notes && notes.length === 0 && (
         <EmptyState
+          icon={NotebookPen}
           title="No notes yet"
           description="Private notes for your own reference - the athlete never sees these."
           action={<Button onClick={() => setDialog({ open: true })}>Add note</Button>}

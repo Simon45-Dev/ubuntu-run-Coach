@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ClipboardList, MessageCircle, Users, UsersRound } from 'lucide-react'
+import { CalendarX, ClipboardList, MessageCircle, Users, UsersRound } from 'lucide-react'
 import { getAnalyticsSummary } from '@/api/analytics'
 import { listRoster } from '@/api/athletes'
 import { getThread } from '@/api/messages'
@@ -181,7 +181,11 @@ export function CoachDashboardPage() {
                   ))}
                 </div>
               ) : !todaysTraining || todaysTraining.length === 0 ? (
-                <EmptyState title="Nothing scheduled today" description="No roster workouts fall on today's date." />
+                <EmptyState
+                  icon={CalendarX}
+                  title="Nothing scheduled today"
+                  description="No roster workouts fall on today's date."
+                />
               ) : (
                 <div className="flex flex-col gap-2">
                   {todaysTraining.map(({ athlete, workout, completed }) => (

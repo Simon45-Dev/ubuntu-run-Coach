@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { listRoster } from '@/api/athletes'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
@@ -97,6 +97,7 @@ export function RosterListPage() {
 
       {!isLoading && athletes && athletes.length === 0 && (
         <EmptyState
+          icon={Users}
           title="No athletes yet"
           description="Add your first athlete to start building their training plan."
           action={<Button onClick={() => setCreateOpen(true)}>Add athlete</Button>}

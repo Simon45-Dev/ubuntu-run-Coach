@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { differenceInCalendarDays } from 'date-fns'
+import { CalendarX, Flag } from 'lucide-react'
 import { getAnalyticsSummary } from '@/api/analytics'
 import { getAthlete } from '@/api/athletes'
 import { listRaceGoals } from '@/api/raceGoals'
@@ -94,7 +95,11 @@ export function AthleteHomePage() {
                   </Link>
                 </div>
               ) : (
-                <EmptyState title="No training scheduled" description="Nothing upcoming on your active plan yet." />
+                <EmptyState
+                  icon={CalendarX}
+                  title="No training scheduled"
+                  description="Nothing upcoming on your active plan yet."
+                />
               )}
             </CardContent>
           </Card>
@@ -205,7 +210,7 @@ export function AthleteHomePage() {
                   )}
                 </div>
               ) : (
-                <EmptyState title="No upcoming race goal" description="Add one from the Race Goals tab." />
+                <EmptyState icon={Flag} title="No upcoming race goal" description="Add one from the Race Goals tab." />
               )}
             </CardContent>
           </Card>

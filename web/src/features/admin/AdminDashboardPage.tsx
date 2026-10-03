@@ -167,7 +167,7 @@ export function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               {stats.recentOrganisations.length === 0 ? (
-                <EmptyState title="No organisations yet" />
+                <EmptyState icon={Building2} title="No organisations yet" />
               ) : (
                 <div className="flex flex-col gap-1">
                   {stats.recentOrganisations.map((org) => (

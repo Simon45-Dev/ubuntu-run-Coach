@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarX, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Workout } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -44,7 +44,7 @@ export function AthletePlanWeekView({
       </div>
 
       {weekWorkouts.length === 0 ? (
-        <EmptyState title="No training scheduled this week" />
+        <EmptyState icon={CalendarX} title="No training scheduled this week" />
       ) : (
         <div className="flex flex-col gap-2">
           {weekWorkouts.map((workout) => {

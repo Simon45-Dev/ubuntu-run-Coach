@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { UserCog } from 'lucide-react'
 import { deleteUser, listUsers, updateUserStatus } from '@/api/users'
 import { ROLES, type Role, type UserStatus } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -100,7 +101,9 @@ export function UsersListPage() {
 
       {isLoading && <FullPageSpinner />}
 
-      {!isLoading && users && users.length === 0 && <EmptyState title="No users match these filters" />}
+      {!isLoading && users && users.length === 0 && (
+        <EmptyState icon={UserCog} title="No users match these filters" />
+      )}
 
       {!isLoading && users && users.length > 0 && (
         <Table>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Plus, TrendingUp, Trophy } from 'lucide-react'
 import { getAnalyticsSummary } from '@/api/analytics'
 import { getCheckIns, listConsents } from '@/api/checkIns'
 import { listCoachNotes } from '@/api/coachNotes'
@@ -165,7 +165,7 @@ export function OverviewTab({ athleteId, canManage }: { athleteId: string; canMa
               {analytics8w && analytics8w.weeklyTrend.length > 0 ? (
                 <WeeklyVolumeChart weeklyTrend={analytics8w.weeklyTrend} />
               ) : (
-                <EmptyState title="No training data yet" />
+                <EmptyState icon={TrendingUp} title="No training data yet" />
               )}
             </CardContent>
           </Card>
@@ -276,7 +276,7 @@ export function OverviewTab({ athleteId, canManage }: { athleteId: string; canMa
             <CardContent>
               {pbLoading && <FullPageSpinner />}
               {!pbLoading && personalBests && personalBests.length === 0 && (
-                <EmptyState title="No personal bests logged yet" />
+                <EmptyState icon={Trophy} title="No personal bests logged yet" />
               )}
               {!pbLoading && personalBests && personalBests.length > 0 && (
                 <div className="flex flex-col gap-2">

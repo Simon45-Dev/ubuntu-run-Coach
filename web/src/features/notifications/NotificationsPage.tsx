@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Bell } from 'lucide-react'
 import { listNotifications, markNotificationRead } from '@/api/notifications'
 import type { NotificationPriority } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
@@ -63,6 +64,7 @@ export function NotificationsPage() {
 
       {!isLoading && items.length === 0 && (
         <EmptyState
+          icon={Bell}
           title={unreadOnly ? 'No unread notifications' : 'No notifications yet'}
           description={unreadOnly ? undefined : "You'll see updates here as they come in."}
         />

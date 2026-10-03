@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { ClipboardList, Plus } from 'lucide-react'
 import { listPlansForAthlete, listPlansForGroup } from '@/api/trainingPlans'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -43,6 +43,7 @@ export function PlansTab({ owner, canManage }: { owner: PlanOwner; canManage: bo
 
       {plans && plans.length === 0 && (
         <EmptyState
+          icon={ClipboardList}
           title="No training plans yet"
           description={canManage ? 'Build a plan to start scheduling workouts.' : 'Your coach hasn’t built a plan yet.'}
           action={canManage ? <Button onClick={() => setCreateOpen(true)}>New plan</Button> : undefined}

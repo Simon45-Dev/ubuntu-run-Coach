@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Wallet } from 'lucide-react'
 import {
   createClubMemberPayment,
   deleteClubMemberPayment,
@@ -148,7 +148,9 @@ export function ClubMemberPaymentsDialog({
 
         {isLoading && <p className="text-sm text-navy/60">Loading...</p>}
 
-        {!isLoading && payments && payments.length === 0 && <EmptyState title="No payments recorded yet" />}
+        {!isLoading && payments && payments.length === 0 && (
+          <EmptyState icon={Wallet} title="No payments recorded yet" />
+        )}
 
         {!isLoading && payments && payments.length > 0 && (
           <Table>

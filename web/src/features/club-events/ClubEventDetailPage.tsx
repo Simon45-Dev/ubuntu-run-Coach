@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { utils, writeFile } from 'xlsx'
-import { Ban, CheckCircle, Download, Plus, Trash2, Upload } from 'lucide-react'
+import { Ban, CheckCircle, Download, Plus, Trash2, Trophy, Upload } from 'lucide-react'
 import {
   deleteClubEvent,
   deleteClubEventResult,
@@ -182,6 +182,7 @@ export function ClubEventDetailPage() {
 
       {filteredResults.length === 0 && (
         <EmptyState
+          icon={Trophy}
           title={event.results.length === 0 ? 'No results yet' : 'No results in this category'}
           description={isManager ? 'Add a result manually or import a CSV file.' : undefined}
         />

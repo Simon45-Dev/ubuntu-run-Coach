@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Plus, Users } from 'lucide-react'
+import { Plus, Users, UsersRound } from 'lucide-react'
 import { listGroups } from '@/api/groups'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
@@ -38,6 +38,7 @@ export function GroupsListPage() {
 
       {!isLoading && groups && groups.length === 0 && (
         <EmptyState
+          icon={UsersRound}
           title="No groups yet"
           description="Create a group to assign a training plan to a whole squad at once."
           action={<Button onClick={() => setCreateOpen(true)}>New group</Button>}

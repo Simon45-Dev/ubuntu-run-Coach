@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { MessageCircle, Users } from 'lucide-react'
 import { getAthlete, listRoster } from '@/api/athletes'
 import { useAuth } from '@/auth/AuthProvider'
 import { FullPageSpinner } from '@/components/Spinner'
@@ -16,7 +17,7 @@ export function MessagesPage() {
   if (ctx?.role === 'ATHLETE' && ctx.athleteId) {
     return <AthleteMessages athleteId={ctx.athleteId} />
   }
-  return <EmptyState title="Messaging isn't available for this account yet" />
+  return <EmptyState icon={MessageCircle} title="Messaging isn't available for this account yet" />
 }
 
 function CoachMessages({ coachId }: { coachId: string }) {
@@ -28,7 +29,13 @@ function CoachMessages({ coachId }: { coachId: string }) {
 
   if (isLoading) return <FullPageSpinner />
   if (!athletes || athletes.length === 0) {
-    return <EmptyState title="No athletes yet" description="Add an athlete to your roster to start messaging." />
+    return (
+      <EmptyState
+        icon={Users}
+        title="No athletes yet"
+        description="Add an athlete to your roster to start messaging."
+      />
+    )
   }
 
   const active = athletes.find((a) => a.id === selected) ?? athletes[0]
@@ -62,7 +69,7 @@ function AthleteMessages({ athleteId }: { athleteId: string }) {
 
   if (isLoading) return <FullPageSpinner />
   if (!athlete?.coach) {
-    return <EmptyState title="You don't have a coach assigned yet" />
+    return <EmptyState icon={Users} title="You don't have a coach assigned yet" />
   }
 
   return <ThreadPanel counterpartUserId={athlete.coach.user.id} counterpartName={athlete.coach.user.name} />

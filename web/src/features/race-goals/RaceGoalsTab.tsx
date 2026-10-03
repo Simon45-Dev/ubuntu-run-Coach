@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Flag, Plus } from 'lucide-react'
 import { deleteRaceGoal, listRaceGoals } from '@/api/raceGoals'
 import type { RaceGoal } from '@/api/types'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,7 @@ export function RaceGoalsTab({ athleteId }: { athleteId: string }) {
 
       {raceGoals && raceGoals.length === 0 && (
         <EmptyState
+          icon={Flag}
           title="No race goals yet"
           description="Add an upcoming race to track progress toward it."
           action={<Button onClick={() => setDialog({ open: true })}>Add race goal</Button>}

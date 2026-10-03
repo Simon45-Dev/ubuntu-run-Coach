@@ -38,6 +38,7 @@ export function TemplatesListPage() {
 
       {!isLoading && templates && templates.length === 0 && (
         <EmptyState
+          icon={ClipboardList}
           title="No templates yet"
           description="Create a reusable training-plan skeleton to apply whenever you need it."
           action={<Button onClick={() => setCreateOpen(true)}>New template</Button>}

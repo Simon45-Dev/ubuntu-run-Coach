@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   BatteryLow,
   CalendarX,
+  CheckCircle2,
   Flag,
   HeartPulse,
   RefreshCw,
@@ -94,6 +95,7 @@ export function ActionCentrePage() {
 
       {alerts.length === 0 && (
         <EmptyState
+          icon={CheckCircle2}
           title="Nothing needs your attention right now"
           description="You're all caught up - check back later or refresh to look again."
         />

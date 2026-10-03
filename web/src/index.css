@@ -42,3 +42,22 @@ body {
   @apply bg-mist text-navy antialiased;
   font-family: var(--font-sans);
 }
+
+/* react-big-calendar ships its own blue accents by default (today's cell,
+   the active toolbar button) - overridden here to use the brand palette
+   instead, since this is the one place in the app a third-party blue was
+   otherwise showing through. */
+.rbc-today {
+  background-color: color-mix(in srgb, var(--color-green) 12%, white);
+}
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button.rbc-active:hover,
+.rbc-toolbar button.rbc-active:focus {
+  background-color: var(--color-green);
+  border-color: var(--color-green);
+  color: var(--color-white);
+}
+.rbc-toolbar button:focus {
+  outline: 2px solid var(--color-green);
+  outline-offset: 1px;
+}

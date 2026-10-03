@@ -45,6 +45,7 @@ export function ClubEventsListPage() {
 
       {!isLoading && events && events.length === 0 && (
         <EmptyState
+          icon={Trophy}
           title="No events yet"
           description={
             isManager

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { History } from 'lucide-react'
 import { listAuditLog } from '@/api/auditLog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -105,6 +106,7 @@ export function AuditLogPage() {
 
       {!isLoading && items.length === 0 && (
         <EmptyState
+          icon={History}
           title="No matching audit log entries"
           description="Actions like deletions and status changes will appear here."
         />

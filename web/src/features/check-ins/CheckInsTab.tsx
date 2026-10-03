@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ShieldCheck } from 'lucide-react'
+import { HeartPulse, ShieldCheck } from 'lucide-react'
 import { getCheckIns, grantConsent, listConsents, withdrawConsent } from '@/api/checkIns'
 import type { CheckIn } from '@/api/types'
 import { Button } from '@/components/ui/button'
@@ -99,6 +99,7 @@ export function CheckInsTab({
       </Card>
     ) : (
       <EmptyState
+        icon={ShieldCheck}
         title="No active consent for health check-in data"
         description="This athlete hasn't granted consent to share check-ins, or has withdrawn it."
       />
@@ -131,7 +132,7 @@ export function CheckInsTab({
         <CardContent className="pt-4">
           {checkInsLoading && <FullPageSpinner />}
           {!checkInsLoading && checkIns && checkIns.items.length === 0 && (
-            <EmptyState title="No check-ins logged yet" />
+            <EmptyState icon={HeartPulse} title="No check-ins logged yet" />
           )}
           {!checkInsLoading && checkIns && checkIns.items.length > 0 && (
             <>
