@@ -237,8 +237,9 @@ export interface TemplateWorkout {
 
 export interface Template {
   id: string
-  coachId: string
-  organisationId: string
+  coachId: string | null
+  organisationId: string | null
+  isGlobal: boolean
   name: string
   goal: string | null
   phase: TrainingPlanPhase | null

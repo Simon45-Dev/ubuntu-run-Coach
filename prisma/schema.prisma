@@ -622,11 +622,16 @@ model WorkoutResult {
 /// A reusable, coach-owned skeleton - never athlete-facing. Workouts are
 /// defined by day offset from an eventual start date, not real dates, since
 /// a template has no start date of its own until it's applied.
+/// A template with coachId/organisationId null and isGlobal true is part of
+/// the platform-wide shared library (published by a PLATFORM_ADMIN) -
+/// visible to every coach, but only the admin may edit/delete it. See
+/// TemplatesService.assertCanManage.
 model TrainingPlanTemplate {
   id             String             @id @default(uuid())
-  organisationId String
-  coachId        String
-  coach          Coach              @relation(fields: [coachId], references: [id])
+  organisationId String?
+  coachId        String?
+  coach          Coach?             @relation(fields: [coachId], references: [id])
+  isGlobal       Boolean            @default(false)
   name           String
   goal           String?
   phase          TrainingPlanPhase?

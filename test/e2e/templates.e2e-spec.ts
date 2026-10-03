@@ -7,6 +7,7 @@ import {
   addTemplateWorkout,
   createAthleteForCoach,
   createGroupForCoach,
+  createPlatformAdmin,
   createTemplateForCoach,
   loginAs,
   registerCoach,
@@ -195,5 +196,116 @@ describe('Templates (e2e)', () => {
       .get(`/api/v1/training-plans/${applyRes.body.id}`)
       .set('Authorization', `Bearer ${coach.accessToken}`)
       .expect(200);
+  });
+
+  describe('shared/global templates', () => {
+    it('a coach cannot create a global template', async () => {
+      const coach = await registerCoach(app);
+      await request(app.getHttpServer())
+        .post('/api/v1/templates/global')
+        .set('Authorization', `Bearer ${coach.accessToken}`)
+        .send({ name: '10K - Sub 50:00' })
+        .expect(403);
+    });
+
+    it('a platform admin creates a global template, visible to any coach', async () => {
+      const admin = await createPlatformAdmin(prisma);
+      const adminToken = await loginAs(app, admin.email, admin.password);
+      const coachA = await registerCoach(app);
+      const coachB = await registerCoach(app);
+
+      const createRes = await request(app.getHttpServer())
+        .post('/api/v1/templates/global')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: '10K - Sub 50:00', goal: 'Finish a 10K in under 50:00' })
+        .expect(201);
+      const templateId = createRes.body.id;
+      await request(app.getHttpServer())
+        .post(`/api/v1/templates/${templateId}/workouts`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ dayOffset: 1, type: 'EASY', paceTarget: '6:10/km' })
+        .expect(201);
+
+      // Visible via GET /templates/global.
+      const globalListRes = await request(app.getHttpServer())
+        .get('/api/v1/templates/global')
+        .set('Authorization', `Bearer ${coachA.accessToken}`)
+        .expect(200);
+      expect(globalListRes.body.some((t: { id: string }) => t.id === templateId)).toBe(true);
+
+      // Mixed into each coach's own template list, regardless of org.
+      for (const coach of [coachA, coachB]) {
+        const listRes = await request(app.getHttpServer())
+          .get(`/api/v1/coaches/${coach.coachId}/templates`)
+          .set('Authorization', `Bearer ${coach.accessToken}`)
+          .expect(200);
+        expect(listRes.body.some((t: { id: string }) => t.id === templateId)).toBe(true);
+      }
+
+      // Directly readable by any coach.
+      const readRes = await request(app.getHttpServer())
+        .get(`/api/v1/templates/${templateId}`)
+        .set('Authorization', `Bearer ${coachA.accessToken}`)
+        .expect(200);
+      expect(readRes.body.isGlobal).toBe(true);
+      expect(readRes.body.workouts).toHaveLength(1);
+    });
+
+    it('a coach cannot edit, add workouts to, or delete a global template', async () => {
+      const admin = await createPlatformAdmin(prisma);
+      const adminToken = await loginAs(app, admin.email, admin.password);
+      const coach = await registerCoach(app);
+
+      const createRes = await request(app.getHttpServer())
+        .post('/api/v1/templates/global')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: '10K - Sub 60:00' })
+        .expect(201);
+      const templateId = createRes.body.id;
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/templates/${templateId}`)
+        .set('Authorization', `Bearer ${coach.accessToken}`)
+        .send({ name: 'Hijacked' })
+        .expect(403);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/templates/${templateId}/workouts`)
+        .set('Authorization', `Bearer ${coach.accessToken}`)
+        .send({ dayOffset: 0, type: 'EASY' })
+        .expect(403);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/templates/${templateId}`)
+        .set('Authorization', `Bearer ${coach.accessToken}`)
+        .expect(403);
+    });
+
+    it("applying a global template to an athlete produces a plan owned by the athlete's own coach", async () => {
+      const admin = await createPlatformAdmin(prisma);
+      const adminToken = await loginAs(app, admin.email, admin.password);
+      const coach = await registerCoach(app);
+      const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+
+      const createRes = await request(app.getHttpServer())
+        .post('/api/v1/templates/global')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: '10K - Sub 70:00' })
+        .expect(201);
+      const templateId = createRes.body.id;
+      await request(app.getHttpServer())
+        .post(`/api/v1/templates/${templateId}/workouts`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ dayOffset: 0, type: 'EASY' })
+        .expect(201);
+
+      const applyRes = await request(app.getHttpServer())
+        .post(`/api/v1/templates/${templateId}/apply`)
+        .set('Authorization', `Bearer ${coach.accessToken}`)
+        .send({ athleteId: athlete.id, startDate: new Date().toISOString() })
+        .expect(201);
+      expect(applyRes.body.coachId).toBe(coach.coachId);
+      expect(applyRes.body.athleteId).toBe(athlete.id);
+    });
   });
 });

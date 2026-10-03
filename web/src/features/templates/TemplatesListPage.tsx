@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Plus, ClipboardList } from 'lucide-react'
-import { listTemplates } from '@/api/templates'
+import { listGlobalTemplates, listTemplates } from '@/api/templates'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -12,21 +13,26 @@ import { CreateTemplateDialog } from './CreateTemplateDialog'
 
 export function TemplatesListPage() {
   const { ctx } = useAuth()
+  const isAdmin = ctx?.role === 'PLATFORM_ADMIN'
   const coachId = ctx?.coachId ?? ''
   const [createOpen, setCreateOpen] = useState(false)
 
   const { data: templates, isLoading } = useQuery({
-    queryKey: ['templates', coachId],
-    queryFn: () => listTemplates(coachId),
-    enabled: !!coachId,
+    queryKey: isAdmin ? ['templates', 'global'] : ['templates', coachId],
+    queryFn: () => (isAdmin ? listGlobalTemplates() : listTemplates(coachId)),
+    enabled: isAdmin || !!coachId,
   })
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Templates</h1>
-          <p className="text-sm text-navy/60">Build a plan once, reuse it for any athlete or group.</p>
+          <h1 className="text-2xl font-bold text-navy">{isAdmin ? 'Shared Library' : 'Templates'}</h1>
+          <p className="text-sm text-navy/60">
+            {isAdmin
+              ? 'Published training programmes every coach can use.'
+              : 'Build a plan once, reuse it for any athlete or group.'}
+          </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" />
@@ -55,7 +61,10 @@ export function TemplatesListPage() {
                     <ClipboardList className="h-5 w-5 text-navy" />
                   </div>
                   <div>
-                    <p className="font-semibold text-navy">{template.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-navy">{template.name}</p>
+                      {!isAdmin && template.isGlobal && <Badge>Shared</Badge>}
+                    </div>
                     {template.goal && <p className="text-sm text-navy/60">{template.goal}</p>}
                     <p className="text-sm text-navy/40">
                       {template.workouts.length} {template.workouts.length === 1 ? 'workout' : 'workouts'}
@@ -68,7 +77,12 @@ export function TemplatesListPage() {
         </div>
       )}
 
-      <CreateTemplateDialog coachId={coachId} open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateTemplateDialog
+        coachId={isAdmin ? undefined : coachId}
+        isGlobal={isAdmin}
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
     </div>
   )
 }

@@ -25,6 +25,18 @@ import { Role } from '../../common/enums/role.enum';
 export class TemplatesController {
   constructor(private readonly templatesService: TemplatesService) {}
 
+  /** Publishes a shared-library template visible to every coach - PLATFORM_ADMIN only. */
+  @Post('templates/global')
+  @Roles(Role.PLATFORM_ADMIN)
+  createGlobal(@Body() dto: CreateTemplateDto) {
+    return this.templatesService.createGlobal(dto);
+  }
+
+  @Get('templates/global')
+  findAllGlobal() {
+    return this.templatesService.findAllGlobal();
+  }
+
   @Post('coaches/:coachId/templates')
   @ScopeResource('coach', 'coachId')
   create(

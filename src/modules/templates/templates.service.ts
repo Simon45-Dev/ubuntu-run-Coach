@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { TrainingPlanTemplate } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthContext } from '../../common/auth-context';
 import { Role } from '../../common/enums/role.enum';
@@ -38,17 +44,43 @@ export class TemplatesService {
     });
   }
 
+  /** PLATFORM_ADMIN only (route-enforced) - publishes a template visible to every coach. */
+  async createGlobal(dto: CreateTemplateDto) {
+    return this.prisma.trainingPlanTemplate.create({
+      data: {
+        coachId: null,
+        organisationId: null,
+        isGlobal: true,
+        name: dto.name,
+        goal: dto.goal,
+        phase: dto.phase,
+      },
+    });
+  }
+
+  async findAllGlobal() {
+    return this.prisma.trainingPlanTemplate.findMany({
+      where: { isGlobal: true, deletedAt: null },
+      include: { workouts: { orderBy: { dayOffset: 'asc' } } },
+    });
+  }
+
+  /** A coach's own templates plus every shared-library (isGlobal) template. */
   async findAllForCoach(ctx: AuthContext, coachId: string) {
     if (ctx.role === Role.COACH && ctx.coachId !== coachId) {
       throw new NotFoundException('Coach not found');
     }
     return this.prisma.trainingPlanTemplate.findMany({
-      where: { coachId, deletedAt: null },
+      where: { deletedAt: null, OR: [{ coachId }, { isGlobal: true }] },
       include: { workouts: { orderBy: { dayOffset: 'asc' } } },
     });
   }
 
-  /** Coach-owner or PLATFORM_ADMIN only - templates are never athlete-facing. */
+  /**
+   * Coach-owner, PLATFORM_ADMIN, or anyone viewing a shared-library template
+   * - templates are never athlete-facing. Read access alone does not imply
+   * the caller may edit/delete it; see assertCanManage for that.
+   */
   async findOne(ctx: AuthContext, id: string) {
     const template = await this.prisma.trainingPlanTemplate.findFirst({
       where: { id, deletedAt: null },
@@ -60,14 +92,36 @@ export class TemplatesService {
     if (ctx.role === Role.PLATFORM_ADMIN) {
       return template;
     }
+    if (template.isGlobal) {
+      return template;
+    }
     if (ctx.role === Role.COACH && template.coachId === ctx.coachId) {
       return template;
     }
     throw new NotFoundException('Template not found');
   }
 
+  /**
+   * Viewing a shared-library template doesn't mean a coach may edit it -
+   * only PLATFORM_ADMIN may mutate isGlobal content. A coach may still only
+   * mutate their own personal templates, same as before this existed.
+   */
+  private assertCanManage(ctx: AuthContext, template: TrainingPlanTemplate): void {
+    if (ctx.role === Role.PLATFORM_ADMIN) {
+      return;
+    }
+    if (template.isGlobal) {
+      throw new ForbiddenException();
+    }
+    if (ctx.role === Role.COACH && template.coachId === ctx.coachId) {
+      return;
+    }
+    throw new NotFoundException('Template not found');
+  }
+
   async update(ctx: AuthContext, id: string, dto: UpdateTemplateDto) {
     const template = await this.findOne(ctx, id);
+    this.assertCanManage(ctx, template);
     return this.prisma.trainingPlanTemplate.update({
       where: { id: template.id },
       data: { name: dto.name, goal: dto.goal, phase: dto.phase },
@@ -78,6 +132,7 @@ export class TemplatesService {
   /** Soft delete - doesn't touch plans already created from this template (independent copies). */
   async softDelete(ctx: AuthContext, id: string): Promise<void> {
     const template = await this.findOne(ctx, id);
+    this.assertCanManage(ctx, template);
     await this.prisma.trainingPlanTemplate.update({
       where: { id: template.id },
       data: { deletedAt: new Date() },
@@ -86,6 +141,7 @@ export class TemplatesService {
 
   async addWorkout(ctx: AuthContext, templateId: string, dto: CreateTemplateWorkoutDto) {
     const template = await this.findOne(ctx, templateId);
+    this.assertCanManage(ctx, template);
     await this.prisma.templateWorkout.create({
       data: {
         templateId: template.id,
@@ -165,6 +221,12 @@ export class TemplatesService {
     let athleteId: string | undefined;
     let groupId: string | undefined;
     let organisationId: string;
+    // The plan's owning coach is always the athlete's/group's own coach, not
+    // the template's - the only thing that made these coincide before was
+    // that a personal template could only ever be applied by its own owner.
+    // A shared-library template has no owning coach at all (coachId null),
+    // so this can no longer be assumed.
+    let coachId: string;
 
     if (dto.athleteId) {
       const athlete = await this.prisma.athlete.findFirst({
@@ -178,6 +240,7 @@ export class TemplatesService {
       }
       athleteId = athlete.id;
       organisationId = athlete.organisationId;
+      coachId = athlete.coachId;
     } else {
       const group = await this.prisma.group.findFirst({
         where: { id: dto.groupId, deletedAt: null },
@@ -190,13 +253,14 @@ export class TemplatesService {
       }
       groupId = group.id;
       organisationId = group.organisationId;
+      coachId = group.coachId;
     }
 
     return this.prisma.$transaction(async (tx) => {
       const plan = await tx.trainingPlan.create({
         data: {
           organisationId,
-          coachId: template.coachId,
+          coachId,
           athleteId,
           groupId,
           name: dto.name ?? template.name,

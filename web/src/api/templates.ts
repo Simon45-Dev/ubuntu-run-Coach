@@ -22,6 +22,17 @@ export async function createTemplate(coachId: string, input: CreateTemplateInput
   return res.data
 }
 
+/** Shared-library templates, visible to every coach - PLATFORM_ADMIN only may create them. */
+export async function listGlobalTemplates(): Promise<Template[]> {
+  const res = await apiClient.get<Template[]>('/templates/global')
+  return res.data
+}
+
+export async function createGlobalTemplate(input: CreateTemplateInput): Promise<Template> {
+  const res = await apiClient.post<Template>('/templates/global', input)
+  return res.data
+}
+
 export async function updateTemplate(
   id: string,
   input: Partial<CreateTemplateInput>,

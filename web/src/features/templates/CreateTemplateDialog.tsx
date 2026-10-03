@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { createTemplate } from '@/api/templates'
+import { createGlobalTemplate, createTemplate } from '@/api/templates'
 import { TRAINING_PLAN_PHASES } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,12 +25,15 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+/** `isGlobal: true` publishes to the shared library instead of one coach's own list (PLATFORM_ADMIN only - enforced server-side). */
 export function CreateTemplateDialog({
   coachId,
+  isGlobal = false,
   open,
   onOpenChange,
 }: {
-  coachId: string
+  coachId?: string
+  isGlobal?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -43,12 +46,16 @@ export function CreateTemplateDialog({
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
+  const queryKey = isGlobal ? ['templates', 'global'] : ['templates', coachId]
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      createTemplate(coachId, { ...values, goal: values.goal || undefined }),
+      isGlobal
+        ? createGlobalTemplate({ ...values, goal: values.goal || undefined })
+        : createTemplate(coachId!, { ...values, goal: values.goal || undefined }),
     onSuccess: () => {
       toast.success('Template created')
-      void queryClient.invalidateQueries({ queryKey: ['templates', coachId] })
+      void queryClient.invalidateQueries({ queryKey })
       reset()
       onOpenChange(false)
     },

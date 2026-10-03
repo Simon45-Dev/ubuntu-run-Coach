@@ -87,6 +87,12 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               Audit Log
             </NavLink>
           )}
+          {isAdmin && (
+            <NavLink to="/templates" className={linkClass}>
+              <ClipboardList className="h-4 w-4" />
+              Shared Library
+            </NavLink>
+          )}
           {isCoach && (
             <NavLink to="/dashboard" className={linkClass}>
               <LayoutDashboard className="h-4 w-4" />

@@ -8,6 +8,7 @@ import type { TemplateWorkout } from '@/api/types'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FullPageSpinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -29,7 +30,6 @@ export function TemplateDetailPage() {
   const { ctx } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const canManage = ctx?.role === 'COACH' || ctx?.role === 'PLATFORM_ADMIN'
 
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState('')
@@ -75,6 +75,13 @@ export function TemplateDetailPage() {
 
   if (isLoading || !template) return <FullPageSpinner />
 
+  // Viewing a shared-library template never implies editing it - only
+  // PLATFORM_ADMIN may manage isGlobal content. Applying, on the other hand,
+  // is a coach-only action regardless of who owns the template (admin has no
+  // roster of their own to apply anything to).
+  const canEdit = ctx?.role === 'PLATFORM_ADMIN' || (ctx?.role === 'COACH' && !template.isGlobal)
+  const canApply = ctx?.role === 'COACH'
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -90,9 +97,12 @@ export function TemplateDetailPage() {
           </div>
         ) : (
           <div>
-            <h1 className="text-2xl font-bold text-navy">{template.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-navy">{template.name}</h1>
+              {template.isGlobal && ctx?.role !== 'PLATFORM_ADMIN' && <Badge>Shared</Badge>}
+            </div>
             {template.goal && <p className="text-sm text-navy/60">{template.goal}</p>}
-            {canManage && (
+            {canEdit && (
               <button
                 className="text-sm text-navy/50 hover:text-green"
                 onClick={() => {
@@ -105,20 +115,20 @@ export function TemplateDetailPage() {
             )}
           </div>
         )}
-        {canManage && (
-          <div className="flex gap-2">
-            <Button onClick={() => setApplyOpen(true)}>Apply template</Button>
+        <div className="flex gap-2">
+          {canApply && <Button onClick={() => setApplyOpen(true)}>Apply template</Button>}
+          {canEdit && (
             <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
               Delete template
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Workouts</CardTitle>
-          {canManage && (
+          {canEdit && (
             <Button variant="outline" size="sm" onClick={() => setWorkoutDialog({ open: true })}>
               <Plus className="h-4 w-4" />
               Add workout
@@ -153,7 +163,7 @@ export function TemplateDetailPage() {
                         {workout.durationTargetSec ? ` · ${formatDuration(workout.durationTargetSec)}` : ''}
                       </span>
                     </div>
-                    {canManage && (
+                    {canEdit && (
                       <div className="flex gap-3">
                         <button
                           className="text-sm text-navy/50 hover:text-green"
@@ -184,10 +194,10 @@ export function TemplateDetailPage() {
         onOpenChange={(open) => setWorkoutDialog({ open })}
       />
 
-      {canManage && (
+      {canApply && (
         <ApplyTemplateDialog
           templateId={template.id}
-          coachId={template.coachId}
+          coachId={ctx?.coachId ?? ''}
           open={applyOpen}
           onOpenChange={setApplyOpen}
         />
