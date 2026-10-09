@@ -76,7 +76,7 @@ export function WorkoutResultForm({ workoutId, canEdit }: { workoutId: string; c
     return (
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <dt className="text-navy/50">Completed</dt>
-        <dd className="text-navy">{formatDate(result.completedAt)}</dd>
+        <dd className="text-navy">{result.completedAt ? formatDate(result.completedAt) : '-'}</dd>
         <dt className="text-navy/50">Distance</dt>
         <dd className="text-navy">{formatDistance(result.actualDistanceKm)}</dd>
         <dt className="text-navy/50">Duration</dt>

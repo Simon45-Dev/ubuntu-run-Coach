@@ -126,5 +126,51 @@ describe('analytics.util', () => {
       const summary = buildAnalyticsSummary([], [], from, to);
       expect(summary.avgRpeDelta).toBeNull();
     });
+
+    it('buckets a standalone (workoutId: null) result into its own completedAt week without touching adherence', () => {
+      const workouts = [{ id: 'w1', scheduledDate: new Date('2026-03-02T00:00:00.000Z') }];
+      const results = [
+        { workoutId: 'w1', actualDistanceKm: 5, actualDurationSec: 1800 },
+        {
+          workoutId: null,
+          completedAt: new Date('2026-03-11T08:00:00.000Z'), // Wednesday, week of Mar 9 - a different week than any scheduled workout
+          actualDistanceKm: 12,
+          actualDurationSec: 4200,
+        },
+      ];
+
+      const summary = buildAnalyticsSummary(workouts, results, from, to);
+
+      // Adherence only reflects the one scheduled-and-completed workout - the standalone run has nothing to be adherent to.
+      expect(summary.adherence).toEqual({ scheduled: 1, completed: 1, rate: 1 });
+      // Volume totals include the standalone run's distance/duration.
+      expect(summary.volume.totalDistanceKm).toBe(17);
+      expect(summary.volume.totalDurationSec).toBe(6000);
+      expect(summary.weeklyTrend).toEqual([
+        {
+          weekStart: '2026-03-02T00:00:00.000Z',
+          scheduled: 1,
+          completed: 1,
+          distanceKm: 5,
+          durationSec: 1800,
+          plannedDistanceKm: 0,
+        },
+        {
+          weekStart: '2026-03-09T00:00:00.000Z',
+          scheduled: 0,
+          completed: 0,
+          distanceKm: 12,
+          durationSec: 4200,
+          plannedDistanceKm: 0,
+        },
+      ]);
+    });
+
+    it('ignores a standalone result with no completedAt', () => {
+      const results = [{ workoutId: null, actualDistanceKm: 12, actualDurationSec: 4200 }];
+      const summary = buildAnalyticsSummary([], results, from, to);
+      expect(summary.weeklyTrend).toEqual([]);
+      expect(summary.volume.totalDistanceKm).toBe(12); // totals still sum unconditionally
+    });
   });
 });

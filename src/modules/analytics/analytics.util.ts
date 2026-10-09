@@ -14,7 +14,10 @@ export interface AnalyticsWorkout {
 }
 
 export interface AnalyticsResult {
-  workoutId: string;
+  /** null for a standalone (quick-logged) result with no planned workout behind it. */
+  workoutId: string | null;
+  /** Only read for a standalone result - a plan-linked one is bucketed by its workout's own scheduledDate instead. */
+  completedAt?: Date | null;
   actualDistanceKm: number | null;
   actualDurationSec: number | null;
   rpe?: number | null;
@@ -95,6 +98,30 @@ export function buildAnalyticsSummary(
     }
     weekBuckets.set(weekStart, bucket);
   }
+
+  // Standalone (quick-logged) results have no Workout to bucket them via the
+  // loop above - fold their distance/duration into the week containing their
+  // own completedAt instead. They never touch scheduled/completed/
+  // plannedDistanceKm - those are specifically about hitting a *planned*
+  // session, and a standalone run has no plan to be adherent to.
+  for (const result of results) {
+    if (result.workoutId !== null || !result.completedAt) {
+      continue;
+    }
+    const weekStart = getWeekStart(result.completedAt).toISOString();
+    const bucket = weekBuckets.get(weekStart) ?? {
+      weekStart,
+      scheduled: 0,
+      completed: 0,
+      distanceKm: 0,
+      durationSec: 0,
+      plannedDistanceKm: 0,
+    };
+    bucket.distanceKm += result.actualDistanceKm ?? 0;
+    bucket.durationSec += result.actualDurationSec ?? 0;
+    weekBuckets.set(weekStart, bucket);
+  }
+
   const weeklyTrend = Array.from(weekBuckets.values()).sort((a, b) =>
     a.weekStart.localeCompare(b.weekStart),
   );

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Calendar, type SlotInfo } from 'react-big-calendar'
+import { Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import { deletePlan, getPlan, updatePlan } from '@/api/trainingPlans'
 import { listWorkoutsForPlan } from '@/api/workouts'
@@ -26,6 +27,7 @@ import { WorkoutDialog } from './WorkoutDialog'
 import { WorkoutDetailDialog } from './WorkoutDetailDialog'
 import { ImportWorkoutsCsvDialog } from './ImportWorkoutsCsvDialog'
 import { AthletePlanWeekView } from './AthletePlanWeekView'
+import { PrintablePlanView } from './PrintablePlanView'
 import { WORKOUT_TYPE_STYLES } from './workoutTypeStyles'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
@@ -105,6 +107,10 @@ export function PlanDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="h-4 w-4" />
+            Print / Export PDF
+          </Button>
           {canManage ? (
             <Select value={plan.status} onValueChange={(v) => statusMutation.mutate(v as TrainingPlanStatus)}>
               <SelectTrigger className="w-36">
@@ -129,8 +135,10 @@ export function PlanDetailPage() {
         </div>
       </div>
 
+      <PrintablePlanView plan={plan} workouts={workouts ?? []} />
+
       {canManage ? (
-        <>
+        <div className="no-print-content contents">
           <div className="rounded-lg border border-navy/10 bg-white p-4">
             <Calendar
               localizer={calendarLocalizer}
@@ -183,9 +191,11 @@ export function PlanDetailPage() {
             }}
           />
           <ImportWorkoutsCsvDialog trainingPlanId={planId!} open={importOpen} onOpenChange={setImportOpen} />
-        </>
+        </div>
       ) : (
-        <AthletePlanWeekView trainingPlanId={planId!} workouts={workouts ?? []} />
+        <div className="no-print-content contents">
+          <AthletePlanWeekView trainingPlanId={planId!} workouts={workouts ?? []} />
+        </div>
       )}
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>

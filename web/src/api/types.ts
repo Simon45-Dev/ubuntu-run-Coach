@@ -357,7 +357,7 @@ export interface Workout {
 
 export interface WorkoutResult {
   id: string
-  workoutId: string
+  workoutId: string | null
   athleteId: string
   actualDistanceKm: string | null
   actualDurationSec: number | null
@@ -366,9 +366,15 @@ export interface WorkoutResult {
   maxHr: number | null
   rpe: number | null
   comments: string | null
-  completedAt: string
+  completedAt: string | null
   createdAt: string
   updatedAt: string
+}
+
+/** A row from GET /athletes/:athleteId/workout-results - plan-linked and standalone results together. */
+export interface AthleteWorkoutResult extends WorkoutResult {
+  workout: { scheduledDate: string; type: WorkoutType } | null
+  effectiveDate: string
 }
 
 export interface Message {

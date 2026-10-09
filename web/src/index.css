@@ -61,3 +61,36 @@ body {
   outline: 2px solid var(--color-green);
   outline-offset: 1px;
 }
+
+/* PrintablePlanView (web/src/features/plans/PrintablePlanView.tsx) renders
+   unconditionally alongside a plan's on-screen calendar/week view, but stays
+   hidden until the browser's print stylesheet reveals it - this is what
+   "Print / Export PDF" actually shows. */
+.print-only {
+  display: none;
+}
+
+@media print {
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+  .print-only {
+    display: block;
+  }
+  .print-only table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .print-only th,
+  .print-only td {
+    border: 1px solid #0d1b2a40;
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 11pt;
+  }
+  .no-print-content {
+    display: none !important;
+  }
+}

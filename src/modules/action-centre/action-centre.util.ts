@@ -45,7 +45,7 @@ export interface WorkoutInput {
 }
 
 export interface WorkoutResultInput {
-  workoutId: string;
+  workoutId: string | null;
 }
 
 export interface RaceGoalInput {

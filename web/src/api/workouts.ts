@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { WorkoutResult, Workout, WorkoutType } from './types'
+import type { AthleteWorkoutResult, WorkoutResult, Workout, WorkoutType } from './types'
 
 export async function listWorkoutsForPlan(trainingPlanId: string): Promise<Workout[]> {
   const res = await apiClient.get<Workout[]>(`/training-plans/${trainingPlanId}/workouts`)
@@ -72,6 +72,34 @@ export async function submitWorkoutResult(
 ): Promise<WorkoutResult> {
   const res = await apiClient.put<WorkoutResult>(`/workouts/${workoutId}/result`, input)
   return res.data
+}
+
+export interface CreateStandaloneResultInput {
+  completedAt: string
+  actualDistanceKm?: number
+  actualDurationSec?: number
+  actualPace?: string
+  avgHr?: number
+  maxHr?: number
+  rpe?: number
+  comments?: string
+}
+
+export async function createStandaloneResult(
+  athleteId: string,
+  input: CreateStandaloneResultInput,
+): Promise<WorkoutResult> {
+  const res = await apiClient.post<WorkoutResult>(`/athletes/${athleteId}/workout-results`, input)
+  return res.data
+}
+
+export async function listResultsForAthlete(athleteId: string): Promise<AthleteWorkoutResult[]> {
+  const res = await apiClient.get<AthleteWorkoutResult[]>(`/athletes/${athleteId}/workout-results`)
+  return res.data
+}
+
+export async function deleteWorkoutResult(id: string): Promise<void> {
+  await apiClient.delete(`/workout-results/${id}`)
 }
 
 function isNotFound(err: unknown): boolean {

@@ -121,4 +121,36 @@ describe('Analytics (e2e)', () => {
       .expect(200);
     expect(bRes.body.adherence).toEqual({ scheduled: 1, completed: 0, rate: 0 });
   });
+
+  it('a standalone (quick-logged) result adds to volume without inflating adherence', async () => {
+    const coach = await registerCoach(app);
+    const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+    const plan = await createTrainingPlanForAthlete(app, coach.accessToken, athlete.id);
+    const workout = await createWorkoutForPlan(app, coach.accessToken, plan.id, {
+      scheduledDate: daysFromNow(1),
+    });
+
+    const athleteToken = await loginAs(app, athlete.email, athlete.password);
+    await request(app.getHttpServer())
+      .put(`/api/v1/workouts/${workout.id}/result`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .send({ actualDistanceKm: 8, actualDurationSec: 2400 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/api/v1/athletes/${athlete.id}/workout-results`)
+      .set('Authorization', `Bearer ${athleteToken}`)
+      .send({ completedAt: daysFromNow(2), actualDistanceKm: 12, actualDurationSec: 3600 })
+      .expect(201);
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/athletes/${athlete.id}/analytics?from=${daysFromNow(0)}&to=${daysFromNow(10)}`)
+      .set('Authorization', `Bearer ${coach.accessToken}`)
+      .expect(200);
+
+    // Adherence only reflects the one scheduled workout - the quick-logged run has nothing to be adherent to.
+    expect(res.body.adherence).toEqual({ scheduled: 1, completed: 1, rate: 1 });
+    expect(res.body.volume.totalDistanceKm).toBeCloseTo(20);
+    expect(res.body.volume.totalDurationSec).toBe(6000);
+  });
 });

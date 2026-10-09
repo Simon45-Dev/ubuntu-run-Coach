@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { differenceInCalendarDays } from 'date-fns'
-import { CalendarX, Flag } from 'lucide-react'
+import { CalendarX, Flag, Plus, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { getAnalyticsSummary } from '@/api/analytics'
 import { getAthlete } from '@/api/athletes'
 import { listRaceGoals } from '@/api/raceGoals'
 import { listPlansForAthlete } from '@/api/trainingPlans'
-import { listWorkoutsForPlan } from '@/api/workouts'
+import { deleteWorkoutResult, listResultsForAthlete, listWorkoutsForPlan } from '@/api/workouts'
 import { getCurrentUser } from '@/api/users'
 import { useAuth } from '@/auth/AuthProvider'
 import { Button } from '@/components/ui/button'
@@ -16,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { WeeklyVolumeChart } from '@/components/charts/WeeklyVolumeChart'
 import { formatDate, formatDistance, formatDuration } from '@/lib/format'
 import { WORKOUT_TYPE_STYLES } from '@/features/plans/workoutTypeStyles'
+import { QuickLogDialog } from './QuickLogDialog'
 import { pickUpcomingWorkouts, computePlanWeek } from './dashboardUtil'
 
 async function loadUpcomingWorkouts(athleteId: string) {
@@ -28,6 +31,8 @@ async function loadUpcomingWorkouts(athleteId: string) {
 export function AthleteHomePage() {
   const { ctx } = useAuth()
   const athleteId = ctx?.athleteId ?? ''
+  const queryClient = useQueryClient()
+  const [quickLogOpen, setQuickLogOpen] = useState(false)
 
   const { data: user } = useQuery({ queryKey: ['me'], queryFn: getCurrentUser })
   const { data: athlete, isLoading: athleteLoading } = useQuery({
@@ -50,6 +55,21 @@ export function AthleteHomePage() {
     queryFn: () => getAnalyticsSummary(athleteId),
     enabled: !!athleteId,
   })
+  const { data: recentResults, isLoading: resultsLoading } = useQuery({
+    queryKey: ['athlete-results', athleteId],
+    queryFn: () => listResultsForAthlete(athleteId),
+    enabled: !!athleteId,
+  })
+
+  const deleteResultMutation = useMutation({
+    mutationFn: deleteWorkoutResult,
+    onSuccess: () => {
+      toast.success('Run removed')
+      void queryClient.invalidateQueries({ queryKey: ['athlete-results', athleteId] })
+      void queryClient.invalidateQueries({ queryKey: ['analytics', athleteId] })
+    },
+    onError: () => toast.error('Could not remove run'),
+  })
 
   const now = new Date()
   const upcoming = planData ? pickUpcomingWorkouts(planData.workouts, now, 4) : []
@@ -64,10 +84,22 @@ export function AthleteHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl bg-gradient-to-br from-forest to-green px-8 py-10 text-white">
-        <h1 className="text-2xl font-bold">Welcome back{user ? `, ${user.name.split(' ')[0]}` : ''}!</h1>
-        <p className="mt-1 text-white/80">Better coaching. Stronger runners. Together.</p>
+      <div className="flex flex-col gap-4 rounded-xl bg-gradient-to-br from-forest to-green px-8 py-10 text-white sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Welcome back{user ? `, ${user.name.split(' ')[0]}` : ''}!</h1>
+          <p className="mt-1 text-white/80">Better coaching. Stronger runners. Together.</p>
+        </div>
+        <Button
+          variant="outline"
+          className="shrink-0 border-white/40 bg-white/10 text-white hover:bg-white/20"
+          onClick={() => setQuickLogOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          Log a run
+        </Button>
       </div>
+
+      <QuickLogDialog athleteId={athleteId} open={quickLogOpen} onOpenChange={setQuickLogOpen} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-6">
@@ -147,6 +179,69 @@ export function AthleteHomePage() {
                     </div>
                   )}
                 </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Runs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {resultsLoading ? (
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : !recentResults || recentResults.length === 0 ? (
+                <EmptyState
+                  icon={CalendarX}
+                  title="No runs logged yet"
+                  description="Completed workouts and quick-logged runs will show up here."
+                />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {recentResults.slice(0, 5).map((result) => (
+                    <div
+                      key={result.id}
+                      className="flex items-center justify-between gap-3 rounded-md border border-navy/10 px-3 py-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          style={
+                            result.workout
+                              ? {
+                                  backgroundColor: `${WORKOUT_TYPE_STYLES[result.workout.type].bg}26`,
+                                  color: WORKOUT_TYPE_STYLES[result.workout.type].bg,
+                                }
+                              : { backgroundColor: '#F39C1226', color: '#F39C12' }
+                          }
+                        >
+                          {result.workout ? WORKOUT_TYPE_STYLES[result.workout.type].label : 'Quick log'}
+                        </span>
+                        <p className="text-sm text-navy/60">{formatDate(result.effectiveDate, 'EEE d MMM')}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-sm text-navy/60">
+                          {result.actualDistanceKm && formatDistance(result.actualDistanceKm)}
+                          {result.actualDistanceKm && result.actualDurationSec && ' · '}
+                          {result.actualDurationSec && formatDuration(result.actualDurationSec)}
+                        </p>
+                        {result.workoutId === null && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteResultMutation.mutate(result.id)}
+                            disabled={deleteResultMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>

@@ -199,4 +199,109 @@ describe('Workout results (e2e)', () => {
       .send({ athleteId: outsider.id, rpe: 5 })
       .expect(404);
   });
+
+  describe('standalone (quick-logged) results', () => {
+    it('an athlete logs a standalone run and sees it alongside their plan-linked results', async () => {
+      const coach = await registerCoach(app);
+      const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+      const plan = await createTrainingPlanForAthlete(app, coach.accessToken, athlete.id);
+      const workout = await createWorkoutForPlan(app, coach.accessToken, plan.id);
+      const athleteToken = await loginAs(app, athlete.email, athlete.password);
+
+      await request(app.getHttpServer())
+        .put(`/api/v1/workouts/${workout.id}/result`)
+        .set('Authorization', `Bearer ${athleteToken}`)
+        .send({ actualDistanceKm: 5 })
+        .expect(200);
+
+      const createRes = await request(app.getHttpServer())
+        .post(`/api/v1/athletes/${athlete.id}/workout-results`)
+        .set('Authorization', `Bearer ${athleteToken}`)
+        .send({
+          completedAt: new Date().toISOString(),
+          actualDistanceKm: 10,
+          comments: 'Unplanned run',
+        })
+        .expect(201);
+      expect(createRes.body.workoutId).toBeNull();
+
+      const listRes = await request(app.getHttpServer())
+        .get(`/api/v1/athletes/${athlete.id}/workout-results`)
+        .set('Authorization', `Bearer ${athleteToken}`)
+        .expect(200);
+      expect(listRes.body).toHaveLength(2);
+      const standalone = listRes.body.find(
+        (r: { workoutId: string | null }) => r.workoutId === null,
+      );
+      expect(standalone.comments).toBe('Unplanned run');
+    });
+
+    it('a coach logs a standalone run on behalf of their own athlete', async () => {
+      const coach = await registerCoach(app);
+      const athlete = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/athletes/${athlete.id}/workout-results`)
+        .set('Authorization', `Bearer ${coach.accessToken}`)
+        .send({ completedAt: new Date().toISOString(), actualDistanceKm: 7 })
+        .expect(201);
+    });
+
+    it('an athlete cannot log a standalone run for another athlete', async () => {
+      const coach = await registerCoach(app);
+      const athleteA = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+      const athleteB = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+      const athleteAToken = await loginAs(app, athleteA.email, athleteA.password);
+
+      // OrgScopeGuard rejects this at the JWT-claim-comparison layer before the
+      // service's DB-backed roster check ever runs, hence 403 rather than 404.
+      await request(app.getHttpServer())
+        .post(`/api/v1/athletes/${athleteB.id}/workout-results`)
+        .set('Authorization', `Bearer ${athleteAToken}`)
+        .send({ completedAt: new Date().toISOString(), actualDistanceKm: 7 })
+        .expect(403);
+    });
+
+    it('a coach cannot log a standalone run for an athlete outside their roster', async () => {
+      const coachA = await registerCoach(app);
+      const coachB = await registerCoach(app);
+      const athleteB = await createAthleteForCoach(app, coachB.accessToken, coachB.coachId);
+
+      await request(app.getHttpServer())
+        .post(`/api/v1/athletes/${athleteB.id}/workout-results`)
+        .set('Authorization', `Bearer ${coachA.accessToken}`)
+        .send({ completedAt: new Date().toISOString(), actualDistanceKm: 7 })
+        .expect(404);
+    });
+
+    it("an athlete can delete their own standalone result but not another athlete's", async () => {
+      const coach = await registerCoach(app);
+      const athleteA = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+      const athleteB = await createAthleteForCoach(app, coach.accessToken, coach.coachId);
+      const athleteAToken = await loginAs(app, athleteA.email, athleteA.password);
+      const athleteBToken = await loginAs(app, athleteB.email, athleteB.password);
+
+      const createRes = await request(app.getHttpServer())
+        .post(`/api/v1/athletes/${athleteA.id}/workout-results`)
+        .set('Authorization', `Bearer ${athleteAToken}`)
+        .send({ completedAt: new Date().toISOString(), actualDistanceKm: 7 })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/workout-results/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${athleteBToken}`)
+        .expect(404);
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/workout-results/${createRes.body.id}`)
+        .set('Authorization', `Bearer ${athleteAToken}`)
+        .expect(200);
+
+      const listRes = await request(app.getHttpServer())
+        .get(`/api/v1/athletes/${athleteA.id}/workout-results`)
+        .set('Authorization', `Bearer ${athleteAToken}`)
+        .expect(200);
+      expect(listRes.body).toHaveLength(0);
+    });
+  });
 });

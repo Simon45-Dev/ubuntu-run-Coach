@@ -595,12 +595,16 @@ model Workout {
 /// workout can carry an independent result for each member. Individual-plan
 /// workouts only ever have one athlete anyway, so this is a strict superset
 /// of the old workoutId-only-unique behaviour, not a narrowing of it.
+/// workoutId is optional - a standalone (quick-logged) result has no planned
+/// Workout behind it. completedAt becomes required in practice for those
+/// (enforced in WorkoutResultsService.createStandalone's DTO, not here),
+/// since there's no Workout.scheduledDate to anchor the entry otherwise.
 model WorkoutResult {
-  id                String   @id @default(uuid())
-  workoutId         String
-  workout           Workout  @relation(fields: [workoutId], references: [id])
+  id                String    @id @default(uuid())
+  workoutId         String?
+  workout           Workout?  @relation(fields: [workoutId], references: [id])
   athleteId         String
-  athlete           Athlete  @relation(fields: [athleteId], references: [id])
+  athlete           Athlete   @relation(fields: [athleteId], references: [id])
   actualDistanceKm  Decimal?
   actualDurationSec Int?
   actualPace        String?
